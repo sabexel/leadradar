@@ -30,8 +30,3 @@ it('shares canRegister with the frontend', function (bool $enabled) {
 
     $this->get('/login')->assertInertia(fn (Assert $page) => $page->where('canRegister', $enabled));
 })->with([true, false]);
-
-it('defaults registration to disabled', function () {
-    expect(require base_path('config/leadradar.php'))
-        ->registration_enabled->toBeFalse();
-})->skip(fn () => env('REGISTRATION_ENABLED') !== null, 'REGISTRATION_ENABLED is set in this environment');

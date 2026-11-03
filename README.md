@@ -29,16 +29,30 @@ runs on shared hosting via a cron-driven queue worker.
 
 ## Setup
 
+Requires PHP 8.3+, Composer, Node 22+ and Docker (for the local MySQL 8 container).
+
 ```bash
 git clone https://github.com/<you>/leadradar.git && cd leadradar
-composer install && npm install
-cp .env.example .env && php artisan key:generate
-# set DB_* and the API keys in .env
-php artisan migrate --seed
+docker compose up -d          # MySQL 8 on localhost:3317 (+ leadradar_testing DB for tests)
+cp .env.example .env          # then fill in the API keys
+composer setup                # composer/npm install, key:generate, migrate, build
+php artisan db:seed
 composer run dev
 ```
 
-API keys needed: Companies House, Reed, Adzuna, MillionVerifier, Brave Search.
+Create your account once: set `REGISTRATION_ENABLED=true`, register at `/register`, then set it back to `false`
+(registration routes return 404 while it is off).
+
+API keys needed: Companies House, Reed, Adzuna, MillionVerifier, Brave Search. They live only in `.env`.
+
+### Quality checks
+
+```bash
+./vendor/bin/pest             # tests (all external APIs faked with Http::fake())
+./vendor/bin/pint --test      # code style
+./vendor/bin/phpstan analyse  # Larastan
+npm run check                 # frontend format + lint
+```
 
 ## Responsible use
 

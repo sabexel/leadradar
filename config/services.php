@@ -35,4 +35,61 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | LeadRadar external services (docs/04-services.md)
+    |--------------------------------------------------------------------------
+    |
+    | Keys live only in .env. Daily caps live in the settings table so they can
+    | be changed from the dashboard; per-minute limits are set here.
+    |
+    */
+
+    'companies_house' => [
+        'key' => env('COMPANIES_HOUSE_API_KEY'),
+        'base_url' => env('COMPANIES_HOUSE_BASE_URL', 'https://api.company-information.service.gov.uk'),
+        'timeout' => 15,
+        'per_minute' => 100,
+    ],
+
+    'reed' => [
+        'key' => env('REED_API_KEY'),
+        'base_url' => env('REED_BASE_URL', 'https://www.reed.co.uk/api/1.0'),
+        'timeout' => 15,
+        'per_minute' => 60,
+    ],
+
+    'adzuna' => [
+        'app_id' => env('ADZUNA_APP_ID'),
+        'app_key' => env('ADZUNA_APP_KEY'),
+        'base_url' => env('ADZUNA_BASE_URL', 'https://api.adzuna.com/v1/api'),
+        'country' => 'gb',
+        'timeout' => 15,
+        'per_minute' => 25,
+    ],
+
+    'millionverifier' => [
+        'key' => env('MILLIONVERIFIER_API_KEY'),
+        'base_url' => env('MILLIONVERIFIER_BASE_URL', 'https://api.millionverifier.com/api/v3'),
+        'timeout' => 20,
+        'verify_timeout' => 10,
+        'per_minute' => 60,
+        'reverify_after_days' => 90,
+    ],
+
+    'brave' => [
+        'key' => env('BRAVE_SEARCH_API_KEY'),
+        'base_url' => env('BRAVE_SEARCH_BASE_URL', 'https://api.search.brave.com/res/v1'),
+        'timeout' => 15,
+        'per_minute' => 60,
+    ],
+
+    'crawler' => [
+        'user_agent' => env('CRAWLER_USER_AGENT', 'LeadRadarBot/1.0 (+https://webwayout.co.uk/bot)'),
+        'timeout' => 10,
+        'max_body_bytes' => 2 * 1024 * 1024,
+        'min_seconds_between_requests' => 2,
+        'robots_cache_hours' => 24,
+    ],
+
 ];

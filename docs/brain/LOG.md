@@ -37,3 +37,14 @@
   canRegister prop, default false). Starter `RegistrationTest` turns the flag on in `setUp`. 45 passing.
 - Decisions: D11 (middleware gate, not removing the Fortify feature), D12 (formatter ignores Markdown).
 - Notes / follow-ups: owner creates the first user with `REGISTRATION_ENABLED=true`, then sets it back to false.
+
+## 2026-11-03 — P0.3 Config, .env.example, README skeleton
+- Done: `config/services.php` blocks `companies_house`, `reed`, `adzuna`, `millionverifier`, `brave`, `crawler`
+  (keys from env, base URLs, timeouts, per-minute limits, crawler UA). `.env.example` lists every API key empty
+  plus `REGISTRATION_ENABLED=false` and `CRAWLER_USER_AGENT`. README setup now covers docker MySQL,
+  `composer setup`, first-user flow and quality checks.
+- Tests: `tests/Unit/EnvExampleTest.php` (all API keys present + empty, registration off, database queue/cache).
+  Removed the env-dependent config-default test from P0.2 (covered here). 52 passing.
+- Decisions: D13 (per-minute limits in config, daily caps in settings).
+- Notes / follow-ups: Adzuna/Brave per-minute values are from free-tier docs as remembered — confirm against
+  official docs when implementing P1.2 / P1.6.

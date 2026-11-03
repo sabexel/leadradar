@@ -8,13 +8,13 @@
 ## Current status
 
 - **Phase:** P0 — in progress
-- **Last completed task:** P0.2 Registration flag
-- **Working on:** P0.3
+- **Last completed task:** P0.3 Config, .env.example, README
+- **Working on:** P0.4
 - **Blocked by:** —
 
 ## Next step
 
-**P0.3** — `.env.example` with every key, `config/services.php` blocks, README skeleton.
+**P0.4** — migrations, models, enums, factories for every table in `docs/03`; `SettingsSeeder`.
 
 ---
 
@@ -25,7 +25,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 ### P0 — Foundation
 - [x] P0.1 Create Laravel app (React starter kit), MySQL, Pest, Pint, Larastan
 - [x] P0.2 Single-user auth (disable public registration after first user)
-- [ ] P0.3 `.env.example`, `config/services.php` entries, README skeleton
+- [x] P0.3 `.env.example`, `config/services.php` entries, README skeleton
 - [ ] P0.4 Migrations + models + enums for all tables in `docs/03`
 - [ ] P0.5 `ApiUsage` logging + per-service daily caps (settings table)
 - [ ] P0.6 GitHub Actions: tests + Pint + Larastan on every push
@@ -83,6 +83,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 | D10 | 2026-11-03 | Tests run against MySQL database `leadradar_testing` (created by the docker init script), not SQLite | Owner's PHP has no `pdo_sqlite`; also gives prod parity for JSON/enum/index behaviour |
 | D11 | 2026-11-03 | Registration stays a Fortify feature; `EnsureRegistrationEnabled` middleware 404s `register`/`register.store` unless `config('leadradar.registration_enabled')` | Routes stay registered so Wayfinder TS imports never break; flag can be flipped at runtime and in tests |
 | D12 | 2026-11-03 | `vp fmt` ignores `*.md` and `docs/**` | Keeps the spec and brain files exactly as written |
+| D13 | 2026-11-03 | `config/services.php` holds keys, base URLs, timeouts and per-minute limits (CH 100, Reed 60, Adzuna 25, MV 60, Brave 60); daily caps stay in `settings` | Per-minute limits are code-level safety; daily caps are owner-tunable from the dashboard |
 
 ## Open questions
 
