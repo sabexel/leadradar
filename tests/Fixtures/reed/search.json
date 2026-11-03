@@ -1,0 +1,57 @@
+{
+    "results": [
+        {
+            "jobId": 50000001,
+            "employerId": 900001,
+            "employerName": "Example Digital Ltd",
+            "employerProfileId": null,
+            "employerProfileName": null,
+            "jobTitle": "Laravel Developer",
+            "locationName": "Manchester",
+            "minimumSalary": 45000.0,
+            "maximumSalary": 55000.0,
+            "currency": "GBP",
+            "expirationDate": "15/12/2026",
+            "date": "01/11/2026",
+            "jobDescription": "We are a small digital agency looking for a <strong>Laravel</strong> developer to join our team... ",
+            "applications": 4,
+            "jobUrl": "https://www.reed.co.uk/jobs/laravel-developer/50000001"
+        },
+        {
+            "jobId": 50000002,
+            "employerId": 900002,
+            "employerName": "Sample Software Studio Ltd",
+            "employerProfileId": 12345,
+            "employerProfileName": "Sample Software Studio",
+            "jobTitle": "Senior PHP / Laravel Engineer",
+            "locationName": "Leeds",
+            "minimumSalary": null,
+            "maximumSalary": null,
+            "currency": null,
+            "expirationDate": "30/11/2026",
+            "date": "20/10/2026",
+            "jobDescription": "Our in-house product is built on Laravel and Vue...",
+            "applications": 11,
+            "jobUrl": "https://www.reed.co.uk/jobs/senior-php-laravel-engineer/50000002"
+        },
+        {
+            "jobId": 50000003,
+            "employerId": 900003,
+            "employerName": "Demo Web Labs Ltd",
+            "employerProfileId": null,
+            "employerProfileName": null,
+            "jobTitle": "Full Stack Developer (Laravel)",
+            "locationName": "Bristol",
+            "minimumSalary": 40000.0,
+            "maximumSalary": 50000.0,
+            "currency": "GBP",
+            "expirationDate": "01/10/2026",
+            "date": "15/08/2026",
+            "jobDescription": "Laravel, Livewire and Tailwind...",
+            "applications": 30,
+            "jobUrl": "https://www.reed.co.uk/jobs/full-stack-developer-laravel/50000003"
+        }
+    ],
+    "ambiguousLocations": [],
+    "totalResults": 250
+}

@@ -1,0 +1,23 @@
+{
+    "employerId": 900001,
+    "employerName": "Example Digital Ltd",
+    "jobId": 50000001,
+    "jobTitle": "Laravel Developer",
+    "locationName": "Manchester",
+    "minimumSalary": 45000.0,
+    "maximumSalary": 55000.0,
+    "yearlyMinimumSalary": 45000.0,
+    "yearlyMaximumSalary": 55000.0,
+    "currency": "GBP",
+    "salaryType": "per annum",
+    "salary": "£45,000 - £55,000 per annum",
+    "datePosted": "01/11/2026",
+    "expirationDate": "15/12/2026",
+    "externalUrl": "https://example-digital.test/careers/laravel-developer",
+    "jobUrl": "https://www.reed.co.uk/jobs/laravel-developer/50000001",
+    "partTime": false,
+    "fullTime": true,
+    "contractType": "Permanent",
+    "jobDescription": "<p>We are a small digital agency in Manchester.</p><p>You will build client projects with <strong>Laravel</strong>, Inertia &amp; React.</p><ul><li>3+ years PHP</li><li>Laravel</li></ul>",
+    "applicationCount": 4
+}

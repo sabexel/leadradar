@@ -7,16 +7,16 @@
 
 ## Current status
 
-- **Phase:** P0 — done locally (P0.6 needs a first green run on GitHub)
-- **Last completed task:** P0.6 CI workflow
-- **Working on:** —
-- **Blocked by:** owner to create the GitHub repo + push; owner to register API keys before P1
+- **Phase:** P1 — in progress (P0.6 still awaits a first green run on GitHub)
+- **Last completed task:** P1.1 Reed service + jobs
+- **Working on:** P1.2
+- **Blocked by:** — (building with faked APIs; live runs need the owner's API keys and the GitHub push)
 
 ## Next step
 
-1. Owner: create the public GitHub repo `leadradar`, push `main`, confirm the `ci` workflow is green → tick P0.6.
-2. Owner: register API keys (docs/00-START-HERE.md) and put them in `.env`.
-3. Then start **P1.1** (`ReedService` + jobs). Check the Reed API docs first (docs/04 warning).
+1. **P1.2** — `AdzunaService::search()` → `JobSearchPage` + `FetchAdzunaJobsJob`, reusing `ExternalApiService`, `InteractsWithServiceLimits` and `IngestJobAdAction`. Confirm Adzuna docs + free-tier limits first.
+2. Owner (still open): create the GitHub repo + push so P0.6 can be ticked; add API keys to `.env`.
+3. When a real `REED_API_KEY` exists, run one live search and compare the JSON keys with `tests/Fixtures/reed/*.json` (D23).
 
 ---
 
@@ -33,7 +33,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 - [~] P0.6 GitHub Actions: tests + Pint + Larastan on every push (workflow written + passes locally; awaiting first green run on GitHub)
 
 ### P1 — Core pipeline (UK, job-ad signal)
-- [ ] P1.1 `ReedService` + `FetchReedJobsJob` + `FetchReedJobDetailJob`
+- [x] P1.1 `ReedService` + `FetchReedJobsJob` + `FetchReedJobDetailJob`
 - [ ] P1.2 `AdzunaService` + `FetchAdzunaJobsJob`
 - [ ] P1.3 `IngestJobAdAction` (dedupe, recruiter filter, create/attach Company)
 - [ ] P1.4 `CompaniesHouseService` (search, profile, officers) + jobs
@@ -95,6 +95,13 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 | D20 | 2026-11-03 | Daily caps reset on the **Europe/London** date (`config/leadradar.timezone`); capped jobs resume next day 06:00 London (`caps_resume_at`). App timezone stays UTC | Matches the 06:10 London discovery run; avoids BST/GMT drift in counts |
 | D21 | 2026-11-03 | `ApiUsageLimiter` checks three layers: per-minute (`config services.*.per_minute`, RateLimiter), rolling 5-min (`cap.*.per_5min`, counted from `api_usages`), daily (`cap.*.per_day`, sum of `cost_units`). Only per_day throws `DailyCapReachedException`; the others throw `RateLimitedException` | Short windows → release for seconds; daily caps → release until tomorrow (docs/05 §7) |
 | D22 | 2026-11-03 | CI = single `.github/workflows/ci.yml` (replaces starter `tests.yml`): MySQL 8 service, PHP 8.3, Pint, Larastan, `npm run build`, `npm run check`, `tsc`, Pest; runs on every push + PR | Tests need MySQL (D10); build runs before type checks because Wayfinder generates route types during the build |
+| D23 | 2026-11-03 | Reed JSON keys (`jobId`, `employerName`, `jobTitle`, `locationName`, `jobDescription`, `jobUrl`, `externalUrl`, `date`/`datePosted` as `dd/mm/yyyy`, `totalResults`) are mapped from Reed's known response shape; the official page lists field *labels* only | Verify against one live response once the key exists; fixtures mirror this shape |
+| D24 | 2026-11-03 | `ReedService::search()` returns a `JobSearchPage` DTO (`ads` + `totalResults`) instead of a bare Collection | Pagination needs the total to stop on the last page |
+| D25 | 2026-11-03 | Outbound jobs use `retryUntil()` = +3 days and `maxExceptions = 3` (with `backoff [30,120,600]`, `timeout 30`) instead of `tries = 3` — shared `InteractsWithServiceLimits` trait | Cap/rate-limit releases must not burn attempts; a capped job waits until 06:00 tomorrow without failing |
+| D26 | 2026-11-03 | `ExternalApiService` base class: `ensureAvailable` → `Http` with `retry(2, 500)` on connection errors/5xx/429 only (2 attempts total) → `record` → 429 ⇒ `RateLimitedException`, other failures/malformed JSON ⇒ `ExternalServiceException`; missing key ⇒ exception before any call | One place for the docs/04 service contract; every later service extends it |
+| D27 | 2026-11-03 | `FetchReedJobsJob` queues `FetchReedJobDetailJob` only for ads within `signal.max_age_days` that are not already Signals; next page only if the page is non-empty, has a fresh ad, `page × 100 < totalResults` and `page < services.reed.max_pages` (10). Daily target checked at the start of every page job | docs/05 stop rules; saves detail calls for known ads; Reed has no date filter so freshness is checked per page |
+| D28 | 2026-11-03 | `IngestJobAdAction` currently only upserts the Signal and bumps `scrape_runs.signals_found`; P1.3 adds recruiter filter, company match/create, suppression, pipeline hand-over | Keeps P1.1 testable end-to-end without pulling P1.3 forward |
+| D29 | 2026-11-03 | `Http::preventStrayRequests()` in the base `TestCase`; JSON fixtures via `jsonFixture()` (Pest already owns `fixture()`) | Enforces “no test may hit a real API” globally |
 
 ## Open questions
 

@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Enums\ExternalService;
+use App\Services\JobBoards\ReedService;
 use App\Services\Support\ApiUsageLimiter;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -20,6 +21,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(ApiUsageLimiter::class);
+        $this->app->singleton(ReedService::class);
     }
 
     /**

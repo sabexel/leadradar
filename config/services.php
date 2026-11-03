@@ -57,6 +57,7 @@ return [
         'base_url' => env('REED_BASE_URL', 'https://www.reed.co.uk/api/1.0'),
         'timeout' => 15,
         'per_minute' => 60,
+        'max_pages' => 10, // safety stop per keyword per run (10 × 100 ads)
     ],
 
     'adzuna' => [

@@ -11,3 +11,13 @@ pest()->extend(TestCase::class)
 
 pest()->extend(TestCase::class)
     ->in('Unit');
+
+/**
+ * Decoded JSON fixture from tests/Fixtures, e.g. jsonFixture('reed/search.json').
+ *
+ * @return array<mixed>
+ */
+function jsonFixture(string $path): array
+{
+    return json_decode((string) file_get_contents(__DIR__.'/Fixtures/'.$path), true, flags: JSON_THROW_ON_ERROR);
+}

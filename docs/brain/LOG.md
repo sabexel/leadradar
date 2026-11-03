@@ -83,3 +83,20 @@
 - Decisions: D22.
 - Notes / follow-ups: P0.6 is marked `[~]` until the first green run on GitHub. `.github/dependabot.yml`
   came with the starter kit and is kept.
+
+## 2026-11-03 — P1.1 ReedService + FetchReedJobsJob + FetchReedJobDetailJob
+- Done: DTOs `JobAdData`, `JobSearchPage`; base `App\Services\Support\ExternalApiService`;
+  `App\Services\JobBoards\ReedService` (`search()`, `getJob()`; Basic auth, `postedByDirectEmployer=true`,
+  HTML to plain text, UK dates); jobs `FetchReedJobsJob` (one page; detail job per fresh unknown ad; next-page
+  rules) and `FetchReedJobDetailJob` (one detail, then `IngestJobAdAction`) on the `sources` queue with
+  `RateLimited('reed')` + `ShouldBeUnique`; trait `InteractsWithServiceLimits`; local `DailyTarget`;
+  minimal `IngestJobAdAction`. `services.reed.max_pages = 10`.
+- Tests: `tests/Feature/Services/ReedServiceTest.php` (11: params/auth, mapping, take cap, detail, blank job,
+  usage logged, 429, 5xx retried once, 4xx not retried, malformed JSON, missing key, daily cap) and
+  `tests/Feature/Jobs/ReedJobsTest.php` (13: next page dispatched / not dispatched for empty, stale, last page,
+  max pages; known ads skipped; target reached = no call; 429 = released; cap = released to 06:00; idempotent
+  detail ingest + run counter; blank job; queue/unique/retry settings). Fixtures in `tests/Fixtures/reed/`
+  (invented companies). 107 passing; Pint + Larastan clean.
+- Decisions: D23–D29.
+- Notes / follow-ups: verify Reed JSON keys against a live response (D23). Reed's rate limit is undocumented;
+  self-limit stays 60/min.

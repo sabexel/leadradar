@@ -1,0 +1,23 @@
+{
+    "employerId": 0,
+    "employerName": null,
+    "jobId": 0,
+    "jobTitle": null,
+    "locationName": null,
+    "minimumSalary": null,
+    "maximumSalary": null,
+    "yearlyMinimumSalary": null,
+    "yearlyMaximumSalary": null,
+    "currency": null,
+    "salaryType": null,
+    "salary": null,
+    "datePosted": null,
+    "expirationDate": null,
+    "externalUrl": null,
+    "jobUrl": null,
+    "partTime": false,
+    "fullTime": false,
+    "contractType": null,
+    "jobDescription": null,
+    "applicationCount": 0
+}

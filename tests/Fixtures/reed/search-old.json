@@ -1,0 +1,23 @@
+{
+    "results": [
+        {
+            "jobId": 50000101,
+            "employerId": 900101,
+            "employerName": "Old Example Media Ltd",
+            "employerProfileId": null,
+            "employerProfileName": null,
+            "jobTitle": "Laravel Developer",
+            "locationName": "London",
+            "minimumSalary": null,
+            "maximumSalary": null,
+            "currency": null,
+            "expirationDate": "01/09/2026",
+            "date": "01/07/2026",
+            "jobDescription": "Laravel developer wanted...",
+            "applications": 52,
+            "jobUrl": "https://www.reed.co.uk/jobs/laravel-developer/50000101"
+        }
+    ],
+    "ambiguousLocations": [],
+    "totalResults": 250
+}
