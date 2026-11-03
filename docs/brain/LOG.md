@@ -74,3 +74,12 @@
 - Decisions: D20, D21.
 - Notes / follow-ups: services (P1) must call `ensureAvailable()` before and `record()` after every call;
   jobs catch `DailyCapReachedException` → `release($e->resumeAt)`.
+
+## 2026-11-03 — P0.6 GitHub Actions CI
+- Done: `.github/workflows/ci.yml` (renamed from the starter `tests.yml`): MySQL 8 service with
+  `leadradar_testing`, PHP 8.3 + extensions, composer install, `.env` from example, Pint, Larastan,
+  `npm ci`, `npm run build`, `npm run check`, `tsc`, Pest. Kept the starter's pinned action SHAs.
+- Tests: ran every step locally — all green (83 Pest tests). Not yet run on GitHub: there is no remote.
+- Decisions: D22.
+- Notes / follow-ups: P0.6 is marked `[~]` until the first green run on GitHub. `.github/dependabot.yml`
+  came with the starter kit and is kept.

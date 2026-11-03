@@ -7,14 +7,16 @@
 
 ## Current status
 
-- **Phase:** P0 — in progress
-- **Last completed task:** P0.5 ApiUsage logging + caps
-- **Working on:** P0.6
-- **Blocked by:** —
+- **Phase:** P0 — done locally (P0.6 needs a first green run on GitHub)
+- **Last completed task:** P0.6 CI workflow
+- **Working on:** —
+- **Blocked by:** owner to create the GitHub repo + push; owner to register API keys before P1
 
 ## Next step
 
-**P0.6** — `.github/workflows/ci.yml` (Pint, Larastan, Pest on MySQL, `npm run build`).
+1. Owner: create the public GitHub repo `leadradar`, push `main`, confirm the `ci` workflow is green → tick P0.6.
+2. Owner: register API keys (docs/00-START-HERE.md) and put them in `.env`.
+3. Then start **P1.1** (`ReedService` + jobs). Check the Reed API docs first (docs/04 warning).
 
 ---
 
@@ -28,7 +30,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 - [x] P0.3 `.env.example`, `config/services.php` entries, README skeleton
 - [x] P0.4 Migrations + models + enums for all tables in `docs/03`
 - [x] P0.5 `ApiUsage` logging + per-service daily caps (settings table)
-- [ ] P0.6 GitHub Actions: tests + Pint + Larastan on every push
+- [~] P0.6 GitHub Actions: tests + Pint + Larastan on every push (workflow written + passes locally; awaiting first green run on GitHub)
 
 ### P1 — Core pipeline (UK, job-ad signal)
 - [ ] P1.1 `ReedService` + `FetchReedJobsJob` + `FetchReedJobDetailJob`
@@ -92,6 +94,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 | D19 | 2026-11-03 | `DatabaseSeeder` always seeds settings; demo user + fake companies only in `local`/`testing` | Never seed demo data into production |
 | D20 | 2026-11-03 | Daily caps reset on the **Europe/London** date (`config/leadradar.timezone`); capped jobs resume next day 06:00 London (`caps_resume_at`). App timezone stays UTC | Matches the 06:10 London discovery run; avoids BST/GMT drift in counts |
 | D21 | 2026-11-03 | `ApiUsageLimiter` checks three layers: per-minute (`config services.*.per_minute`, RateLimiter), rolling 5-min (`cap.*.per_5min`, counted from `api_usages`), daily (`cap.*.per_day`, sum of `cost_units`). Only per_day throws `DailyCapReachedException`; the others throw `RateLimitedException` | Short windows → release for seconds; daily caps → release until tomorrow (docs/05 §7) |
+| D22 | 2026-11-03 | CI = single `.github/workflows/ci.yml` (replaces starter `tests.yml`): MySQL 8 service, PHP 8.3, Pint, Larastan, `npm run build`, `npm run check`, `tsc`, Pest; runs on every push + PR | Tests need MySQL (D10); build runs before type checks because Wayfinder generates route types during the build |
 
 ## Open questions
 
