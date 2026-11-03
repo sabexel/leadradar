@@ -16,4 +16,18 @@ return [
 
     'registration_enabled' => (bool) env('REGISTRATION_ENABLED', false),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Business day
+    |--------------------------------------------------------------------------
+    |
+    | Daily caps and targets reset at midnight in this timezone. Jobs that hit a
+    | daily cap are released until `caps_resume_at` the next business day.
+    |
+    */
+
+    'timezone' => 'Europe/London',
+
+    'caps_resume_at' => '06:00',
+
 ];

@@ -61,3 +61,16 @@
   pruning). 69 passing; Pint + Larastan clean; `migrate:fresh --seed` works.
 - Decisions: D14–D19.
 - Notes / follow-ups: `Setting::get()` hits the DB each call — add caching later only if it shows up as slow.
+
+## 2026-11-03 — P0.5 ApiUsage logging + per-service daily caps
+- Done: `App\Services\Support\ApiUsageLimiter` (`ensureAvailable`, `record`, `usedToday`, `dailyCap`,
+  `remainingToday`, `resumeAt`, `businessDate`), registered as a singleton. Exceptions
+  `DailyCapReachedException`, `RateLimitedException`, `ExternalServiceException` in `app/Exceptions`.
+  Named `RateLimiter::for()` per service (from `services.*.per_minute`) in `AppServiceProvider` for the
+  `RateLimited` job middleware. `config/leadradar.php` gains `timezone` + `caps_resume_at`.
+- Tests: `tests/Feature/Services/ApiUsageLimiterTest.php` — usage recorded with cost units, London business
+  date, under/at daily cap, per-service/per-day isolation, resume at 06:00 next day, uncapped services,
+  per-minute limit, CH rolling 5-min cap, named limiters registered. 83 passing; Pint + Larastan clean.
+- Decisions: D20, D21.
+- Notes / follow-ups: services (P1) must call `ensureAvailable()` before and `record()` after every call;
+  jobs catch `DailyCapReachedException` → `release($e->resumeAt)`.

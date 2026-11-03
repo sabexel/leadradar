@@ -8,13 +8,13 @@
 ## Current status
 
 - **Phase:** P0 — in progress
-- **Last completed task:** P0.4 Schema (migrations, models, enums, factories)
-- **Working on:** P0.5
+- **Last completed task:** P0.5 ApiUsage logging + caps
+- **Working on:** P0.6
 - **Blocked by:** —
 
 ## Next step
 
-**P0.5** — `ApiUsageLimiter` (daily caps from settings + per-minute `RateLimiter::for()`), `DailyCapReachedException`, `RateLimitedException`.
+**P0.6** — `.github/workflows/ci.yml` (Pint, Larastan, Pest on MySQL, `npm run build`).
 
 ---
 
@@ -27,7 +27,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 - [x] P0.2 Single-user auth (disable public registration after first user)
 - [x] P0.3 `.env.example`, `config/services.php` entries, README skeleton
 - [x] P0.4 Migrations + models + enums for all tables in `docs/03`
-- [ ] P0.5 `ApiUsage` logging + per-service daily caps (settings table)
+- [x] P0.5 `ApiUsage` logging + per-service daily caps (settings table)
 - [ ] P0.6 GitHub Actions: tests + Pint + Larastan on every push
 
 ### P1 — Core pipeline (UK, job-ad signal)
@@ -90,6 +90,8 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 | D17 | 2026-11-03 | Retention: companies never contacted + idle 12 months (docs/09); `pipeline_events` 12 months; `api_usages` 180 days — all via `model:prune` | docs/08 says prune both tables but gave no window |
 | D18 | 2026-11-03 | `Setting::DEFAULTS` is the single source of default settings; `Setting::get()` falls back to it; `SettingsSeeder` uses `firstOrCreate` (never overwrites) | Safe to re-run in production; code never breaks on a missing row |
 | D19 | 2026-11-03 | `DatabaseSeeder` always seeds settings; demo user + fake companies only in `local`/`testing` | Never seed demo data into production |
+| D20 | 2026-11-03 | Daily caps reset on the **Europe/London** date (`config/leadradar.timezone`); capped jobs resume next day 06:00 London (`caps_resume_at`). App timezone stays UTC | Matches the 06:10 London discovery run; avoids BST/GMT drift in counts |
+| D21 | 2026-11-03 | `ApiUsageLimiter` checks three layers: per-minute (`config services.*.per_minute`, RateLimiter), rolling 5-min (`cap.*.per_5min`, counted from `api_usages`), daily (`cap.*.per_day`, sum of `cost_units`). Only per_day throws `DailyCapReachedException`; the others throw `RateLimitedException` | Short windows → release for seconds; daily caps → release until tomorrow (docs/05 §7) |
 
 ## Open questions
 
