@@ -8,13 +8,13 @@
 ## Current status
 
 - **Phase:** P0 — in progress
-- **Last completed task:** P0.3 Config, .env.example, README
-- **Working on:** P0.4
+- **Last completed task:** P0.4 Schema (migrations, models, enums, factories)
+- **Working on:** P0.5
 - **Blocked by:** —
 
 ## Next step
 
-**P0.4** — migrations, models, enums, factories for every table in `docs/03`; `SettingsSeeder`.
+**P0.5** — `ApiUsageLimiter` (daily caps from settings + per-minute `RateLimiter::for()`), `DailyCapReachedException`, `RateLimitedException`.
 
 ---
 
@@ -26,7 +26,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 - [x] P0.1 Create Laravel app (React starter kit), MySQL, Pest, Pint, Larastan
 - [x] P0.2 Single-user auth (disable public registration after first user)
 - [x] P0.3 `.env.example`, `config/services.php` entries, README skeleton
-- [ ] P0.4 Migrations + models + enums for all tables in `docs/03`
+- [x] P0.4 Migrations + models + enums for all tables in `docs/03`
 - [ ] P0.5 `ApiUsage` logging + per-service daily caps (settings table)
 - [ ] P0.6 GitHub Actions: tests + Pint + Larastan on every push
 
@@ -84,6 +84,12 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 | D11 | 2026-11-03 | Registration stays a Fortify feature; `EnsureRegistrationEnabled` middleware 404s `register`/`register.store` unless `config('leadradar.registration_enabled')` | Routes stay registered so Wayfinder TS imports never break; flag can be flipped at runtime and in tests |
 | D12 | 2026-11-03 | `vp fmt` ignores `*.md` and `docs/**` | Keeps the spec and brain files exactly as written |
 | D13 | 2026-11-03 | `config/services.php` holds keys, base URLs, timeouts and per-minute limits (CH 100, Reed 60, Adzuna 25, MV 60, Brave 60); daily caps stay in `settings` | Per-minute limits are code-level safety; daily caps are owner-tunable from the dashboard |
+| D14 | 2026-11-03 | `people` also has `source_url`; `people.position` is nullable (resigned / 3rd+ officers) | CLAUDE.md requires `source` + `source_url` for every personal-data field |
+| D15 | 2026-11-03 | Extra enums beyond docs/03: `EmailOrigin`, `PersonRole`, `DataSource`, `PageType`, `PipelineOutcome`, `RunTrigger`, `ScrapeRunStatus`, `ExternalService`, `SuppressionType`, `SuppressionReason`. Columns are `string` + enum cast (no MySQL ENUM) | “PHP enums for every status/type field”; string columns avoid ALTERs when a case is added |
+| D16 | 2026-11-03 | `crawled_pages.url` is `varchar(700)` | Unique `(company_id, url)` must fit MySQL utf8mb4 3072-byte key limit |
+| D17 | 2026-11-03 | Retention: companies never contacted + idle 12 months (docs/09); `pipeline_events` 12 months; `api_usages` 180 days — all via `model:prune` | docs/08 says prune both tables but gave no window |
+| D18 | 2026-11-03 | `Setting::DEFAULTS` is the single source of default settings; `Setting::get()` falls back to it; `SettingsSeeder` uses `firstOrCreate` (never overwrites) | Safe to re-run in production; code never breaks on a missing row |
+| D19 | 2026-11-03 | `DatabaseSeeder` always seeds settings; demo user + fake companies only in `local`/`testing` | Never seed demo data into production |
 
 ## Open questions
 

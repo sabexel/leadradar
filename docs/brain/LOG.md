@@ -48,3 +48,16 @@
 - Decisions: D13 (per-minute limits in config, daily caps in settings).
 - Notes / follow-ups: Adzuna/Brave per-minute values are from free-tier docs as remembered — confirm against
   official docs when implementing P1.2 / P1.6.
+
+## 2026-11-03 — P0.4 Schema: migrations, models, enums, factories
+- Done: 11 migrations (companies, people, email_addresses, circular email FKs, signals, crawled_pages,
+  pipeline_events, scrape_runs, api_usages, suppressions, settings) with the docs/03 indexes/uniques.
+  18 enums in `app/Enums`. Models `Company`, `Person`, `EmailAddress`, `Signal`, `CrawledPage`, `PipelineEvent`,
+  `ScrapeRun`, `ApiUsage`, `Suppression`, `Setting` (attributes-style `#[Fillable]`, enum casts, typed relations,
+  `Company::founders()`, prunable retention). Factories for all (fake `.test` domains). `SettingsSeeder`,
+  `DatabaseSeeder` with local-only demo data.
+- Tests: `tests/Feature/Models/*` (defaults, casts, leading zeros, relationships, founders ordering + resigned
+  exclusion, lowercased emails, unique constraints, cascade/null-on-delete, settings seed/no-overwrite/fallback,
+  pruning). 69 passing; Pint + Larastan clean; `migrate:fresh --seed` works.
+- Decisions: D14–D19.
+- Notes / follow-ups: `Setting::get()` hits the DB each call — add caching later only if it shows up as slow.
