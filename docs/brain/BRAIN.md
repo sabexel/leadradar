@@ -7,14 +7,14 @@
 
 ## Current status
 
-- **Phase:** P0 — not started
-- **Last completed task:** —
-- **Working on:** —
+- **Phase:** P0 — in progress
+- **Last completed task:** P0.1 Create Laravel app
+- **Working on:** P0.2
 - **Blocked by:** —
 
 ## Next step
 
-Start **P0.1** in `docs/10-build-plan.md` (create the Laravel app with the React starter kit).
+**P0.2** — `REGISTRATION_ENABLED` flag (default false) on the Fortify registration routes.
 
 ---
 
@@ -23,7 +23,7 @@ Start **P0.1** in `docs/10-build-plan.md` (create the Laravel app with the React
 Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are met.
 
 ### P0 — Foundation
-- [ ] P0.1 Create Laravel app (React starter kit), MySQL, Pest, Pint, Larastan
+- [x] P0.1 Create Laravel app (React starter kit), MySQL, Pest, Pint, Larastan
 - [ ] P0.2 Single-user auth (disable public registration after first user)
 - [ ] P0.3 `.env.example`, `config/services.php` entries, README skeleton
 - [ ] P0.4 Migrations + models + enums for all tables in `docs/03`
@@ -78,6 +78,9 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 | D5 | 2026-11-03 | Primary signal = UK job ads mentioning Laravel (Reed, Adzuna) | Highest-intent signal: budget + confirmed gap |
 | D6 | 2026-11-03 | Daily target = 50 qualified leads, not raw volume | Finite market; owner sends 5–15/day |
 | D7 | 2026-11-03 | UK leads must be an active Ltd/LLP on Companies House | PECR: sole traders/partnerships need consent |
+| D8 | 2026-11-03 | Scaffolded from `laravel/react-starter-kit:dev-main` (Laravel 13, Inertia 3, Fortify, Wayfinder) | The tagged Packagist release (v1.0.1) is still Laravel 12; `laravel new` uses `main` too |
+| D9 | 2026-11-03 | Local MySQL 8 runs in `docker-compose.yml` as `leadradar-mysql` on host port **3317** | 3306/3307 already used by other local containers; Hostinger still uses 3306 |
+| D10 | 2026-11-03 | Tests run against MySQL database `leadradar_testing` (created by the docker init script), not SQLite | Owner's PHP has no `pdo_sqlite`; also gives prod parity for JSON/enum/index behaviour |
 
 ## Open questions
 
