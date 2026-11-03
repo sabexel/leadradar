@@ -15,6 +15,8 @@ class RegistrationTest extends TestCase
         parent::setUp();
 
         $this->skipUnlessFortifyHas(Features::registration());
+
+        config(['leadradar.registration_enabled' => true]);
     }
 
     public function test_registration_screen_can_be_rendered()

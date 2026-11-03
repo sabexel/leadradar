@@ -1,21 +1,21 @@
 # Local development database only. Production runs on Hostinger MySQL (docs/08).
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: leadradar-mysql
-    restart: unless-stopped
-    ports:
-      - "${FORWARD_DB_PORT:-3317}:3306"
-    environment:
-      MYSQL_ROOT_PASSWORD: "${DB_PASSWORD:-secret}"
-      MYSQL_DATABASE: "${DB_DATABASE:-leadradar}"
-    volumes:
-      - leadradar-mysql:/var/lib/mysql
-      - ./docker/mysql/create-testing-database.sql:/docker-entrypoint-initdb.d/10-create-testing-database.sql:ro
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-p${DB_PASSWORD:-secret}"]
-      interval: 5s
-      retries: 10
+    mysql:
+        image: mysql:8.0
+        container_name: leadradar-mysql
+        restart: unless-stopped
+        ports:
+            - '${FORWARD_DB_PORT:-3317}:3306'
+        environment:
+            MYSQL_ROOT_PASSWORD: '${DB_PASSWORD:-secret}'
+            MYSQL_DATABASE: '${DB_DATABASE:-leadradar}'
+        volumes:
+            - leadradar-mysql:/var/lib/mysql
+            - ./docker/mysql/create-testing-database.sql:/docker-entrypoint-initdb.d/10-create-testing-database.sql:ro
+        healthcheck:
+            test: ['CMD', 'mysqladmin', 'ping', '-p${DB_PASSWORD:-secret}']
+            interval: 5s
+            retries: 10
 
 volumes:
-  leadradar-mysql:
+    leadradar-mysql:

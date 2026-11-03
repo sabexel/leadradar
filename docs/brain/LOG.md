@@ -28,3 +28,12 @@
 - Decisions: D8 (starter kit main), D9 (docker MySQL on 3317), D10 (tests on MySQL).
 - Notes / follow-ups: local setup = `docker compose up -d`, `cp .env.example .env`, `composer setup`.
   A leftover scaffold copy may exist at `C:\Projects\leadradar_tmp` — safe to delete by hand.
+
+## 2026-11-03 — P0.2 Single-user auth (registration flag)
+- Done: `config/leadradar.php` (`registration_enabled` from `REGISTRATION_ENABLED`, default false),
+  `App\Http\Middleware\EnsureRegistrationEnabled` (appended to the web group), shared Inertia prop
+  `canRegister`; Register/Sign up links hidden on `welcome.tsx` and `auth/login.tsx` when off.
+- Tests: `tests/Feature/Auth/RegistrationFlagTest.php` (GET + POST /register → 404, no user created,
+  canRegister prop, default false). Starter `RegistrationTest` turns the flag on in `setUp`. 45 passing.
+- Decisions: D11 (middleware gate, not removing the Fortify feature), D12 (formatter ignores Markdown).
+- Notes / follow-ups: owner creates the first user with `REGISTRATION_ENABLED=true`, then sets it back to false.

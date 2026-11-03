@@ -8,13 +8,13 @@
 ## Current status
 
 - **Phase:** P0 — in progress
-- **Last completed task:** P0.1 Create Laravel app
-- **Working on:** P0.2
+- **Last completed task:** P0.2 Registration flag
+- **Working on:** P0.3
 - **Blocked by:** —
 
 ## Next step
 
-**P0.2** — `REGISTRATION_ENABLED` flag (default false) on the Fortify registration routes.
+**P0.3** — `.env.example` with every key, `config/services.php` blocks, README skeleton.
 
 ---
 
@@ -24,7 +24,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 
 ### P0 — Foundation
 - [x] P0.1 Create Laravel app (React starter kit), MySQL, Pest, Pint, Larastan
-- [ ] P0.2 Single-user auth (disable public registration after first user)
+- [x] P0.2 Single-user auth (disable public registration after first user)
 - [ ] P0.3 `.env.example`, `config/services.php` entries, README skeleton
 - [ ] P0.4 Migrations + models + enums for all tables in `docs/03`
 - [ ] P0.5 `ApiUsage` logging + per-service daily caps (settings table)
@@ -81,6 +81,8 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 | D8 | 2026-11-03 | Scaffolded from `laravel/react-starter-kit:dev-main` (Laravel 13, Inertia 3, Fortify, Wayfinder) | The tagged Packagist release (v1.0.1) is still Laravel 12; `laravel new` uses `main` too |
 | D9 | 2026-11-03 | Local MySQL 8 runs in `docker-compose.yml` as `leadradar-mysql` on host port **3317** | 3306/3307 already used by other local containers; Hostinger still uses 3306 |
 | D10 | 2026-11-03 | Tests run against MySQL database `leadradar_testing` (created by the docker init script), not SQLite | Owner's PHP has no `pdo_sqlite`; also gives prod parity for JSON/enum/index behaviour |
+| D11 | 2026-11-03 | Registration stays a Fortify feature; `EnsureRegistrationEnabled` middleware 404s `register`/`register.store` unless `config('leadradar.registration_enabled')` | Routes stay registered so Wayfinder TS imports never break; flag can be flipped at runtime and in tests |
+| D12 | 2026-11-03 | `vp fmt` ignores `*.md` and `docs/**` | Keeps the spec and brain files exactly as written |
 
 ## Open questions
 
