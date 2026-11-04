@@ -84,6 +84,30 @@ return [
         'base_url' => env('BRAVE_SEARCH_BASE_URL', 'https://api.search.brave.com/res/v1'),
         'timeout' => 15,
         'per_minute' => 60,
+        'results_per_query' => 10, // API max is 20; one query costs one unit either way
+
+        // Never a company's own website (docs/04). Subdomains are blocked too; *.gov.uk always is.
+        'blocked_domains' => [
+            // registries and company-data directories
+            'company-information.service.gov.uk', 'endole.co.uk', 'companycheck.co.uk', 'opencorporates.com',
+            'companiesintheuk.co.uk', 'bizdb.co.uk', 'companyhouse.co.uk', 'dnb.com', 'bloomberg.com',
+            'crunchbase.com', 'zoominfo.com', 'rocketreach.co', 'apollo.io', 'lusha.com', 'cbinsights.com',
+            'pitchbook.com', 'owler.com', 'craft.co', 'northdata.com', 'globaldatabase.com', 'thegazette.co.uk',
+            // business listings and reviews
+            'yell.com', 'thomsonlocal.com', 'freeindex.co.uk', 'scoot.co.uk', 'cylex-uk.co.uk', 'hotfrog.co.uk',
+            'yelp.com', 'yelp.co.uk', 'trustpilot.com', 'checkatrade.com', 'bark.com',
+            // agency directories
+            'clutch.co', 'goodfirms.co', 'designrush.com', 'sortlist.com', 'sortlist.co.uk', 'themanifest.com',
+            'agencyspotter.com', 'upcity.com', 'thedrum.com',
+            // job boards and freelance marketplaces
+            'reed.co.uk', 'indeed.com', 'indeed.co.uk', 'adzuna.co.uk', 'totaljobs.com', 'cwjobs.co.uk',
+            'glassdoor.com', 'glassdoor.co.uk', 'monster.co.uk', 'cv-library.co.uk', 'jobsite.co.uk',
+            'workable.com', 'otta.com', 'welcometothejungle.com', 'upwork.com', 'fiverr.com', 'peopleperhour.com',
+            // social, code hosting, encyclopaedias, maps
+            'linkedin.com', 'facebook.com', 'instagram.com', 'twitter.com', 'x.com', 'youtube.com', 'tiktok.com',
+            'pinterest.com', 'github.com', 'gitlab.com', 'medium.com', 'wikipedia.org', 'google.com',
+            'google.co.uk', 'bing.com', 'apple.com',
+        ],
     ],
 
     'crawler' => [

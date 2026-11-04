@@ -8,14 +8,14 @@
 ## Current status
 
 - **Phase:** P1 — in progress
-- **Last completed task:** P1.5 Company classifier + offshore detector (text)
-- **Working on:** P1.6
+- **Last completed task:** P1.6 Brave website lookup
+- **Working on:** P1.7
 - **Blocked by:** — (building with faked APIs; owner is registering API keys)
 
 ## Next step
 
-1. **P1.6** — `BraveSearchService::findCompanyWebsite()` + `FindCompanyWebsiteJob` (`web` queue, `RateLimited('brave')`, daily cap `cap.brave.per_day`); directory blocklist (Companies House, Endole, LinkedIn, Facebook, Indeed, Reed, Glassdoor, Yell, Clutch, Bloomberg, Crunchbase…); result must contain a significant name token. Set `website` + `domain` (unique — handle a domain already owned by another company), then the suppression gate catches suppressed domains. Skip the job when `website` is already known. No result → `rejected(no_website)`. Wire `find_website` into `AdvanceLeadPipelineAction`. Check the Brave API docs + free-tier limits first (open question in BRAIN).
-2. Owner: put API keys in `.env`; verify Reed JSON keys (D23), Adzuna limits (D31), one Companies House search.
+1. **P1.7** — crawler: `RobotsTxtGuard` (cached 24 h, `Crawl-delay`), `WebsiteCrawlerService::fetchPage()` (UA from `services.crawler.user_agent`, 10 s timeout, 2 MB cap, same-domain only, ≥ 2 s per domain via cache lock / `WithoutOverlapping("crawl:{domain}")`), local `EmailExtractor`, `LaravelSignalDetector`, `OffshoreSignalDetector` page part (reuse `detectInText`), `CrawlCompanyWebsiteJob` (one page per job, queues the next candidate up to `cap.crawler.pages_per_company`), `ApplyCrawlResultAction` (store extracted facts only, never HTML), then re-run `ClassifyCompanyAction` with page text (offshore → rejected). Wire `crawl` into `AdvanceLeadPipelineAction`. Companies now arrive at `crawl` with `website` + `domain` set.
+2. Owner: put API keys in `.env`; verify Reed JSON keys (D23), Adzuna limits (D31), one CH search, one Brave query + the Brave free-tier quota (open question).
 3. Confirm the Hostinger plan offers PHP 8.4+ (D30).
 
 ---
@@ -38,7 +38,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 - [x] P1.3 `IngestJobAdAction` (dedupe, recruiter filter, create/attach Company)
 - [x] P1.4 `CompaniesHouseService` (search, profile, officers) + jobs
 - [x] P1.5 `CompanyClassifier` (agency / direct client / recruiter / offshore) from SIC + text
-- [ ] P1.6 `BraveSearchService::findCompanyWebsite()` + job
+- [x] P1.6 `BraveSearchService::findCompanyWebsite()` + job
 - [ ] P1.7 `WebsiteCrawlerService` (pages, emails, Laravel signals, offshore signals) + job
 - [ ] P1.8 `EmailPatternService` (local) — candidate founder emails
 - [ ] P1.9 `MillionVerifierService` + `VerifyEmailJob` (stop at first `ok`, honour credit cap)
@@ -124,11 +124,15 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 | D49 | 2026-11-04 | A strong offshore signal already in the job-ad text rejects at the **first** classify (docs/05 only rejects after the crawl). The crawl re-runs `ClassifyCompanyAction` with page text in P1.7 | Saves Brave, crawl and MillionVerifier spend on competitors |
 | D50 | 2026-11-04 | `CompanyClassifier` order: recruiter (name or SIC 78xxx) → offshore → agency (explicit "digital/web/creative/development/software/design/marketing/branding/e-commerce agency/studio" phrase, **or** agency language + one of the 7 agency SIC codes from docs/04) → direct_client (has a job ad, no agency language) → unknown. Input is a plain `ClassificationInput` DTO | Unit-testable without the DB; same classifier runs again with crawl text later |
 | D51 | 2026-11-04 | `AdvanceLeadPipelineAction` runs local steps inline in a loop (max 10) until a step needs a job or the company finishes; `classify` → `find_website` | Jobs stay "one call"; a job's hand-over carries the company through every following local step |
+| D52 | 2026-11-04 | Brave: `GET /res/v1/web/search` with `q`, `country=GB`, `count=10` (API max 20), `safesearch=moderate`, header `X-Subscription-Token`; results from `web.results[]` (`title`, `url`, `description`; HTML stripped). Domain derived from `url` (no `meta_url` in the docs). Daily cap stays `cap.brave.per_day = 150` | Confirmed against the official docs on 2026-11-04; they do not state free-plan quotas — still an open question |
+| D53 | 2026-11-04 | Local `WebsiteSelector`: blocklist in `config/services.php → brave.blocked_domains` (registries, data directories, listings, agency directories, job boards, socials, code hosts; subdomains blocked; any `*.gov.uk` blocked). Significant tokens = normalised name words ≥ 3 letters minus a generic-word list (digital, studio, web, labs, software…), falling back to all words. First non-blocked result whose domain/title/snippet contains a token as a whole word (or the token inside the dash/dot-less domain) wins. `website` = origin as found (`https://www.example.co.uk`), `domain` = bare host | docs/04 rule made concrete and testable without the network; blocklist editable without code changes |
+| D54 | 2026-11-04 | A found domain that already belongs to another company → `rejected(no_website)` with message "already belongs to another lead" + the owner's id in the event | `companies.domain` is unique and one website = one set of people to email |
+| D55 | 2026-11-04 | `find_website` is a local step when `website` is already set (normalises it, sets `domain`, → `crawl`); the Brave job runs only when it is unknown | docs/05 "skip if website known"; saves paid queries for manual imports |
 
 ## Open questions
 
 - Hostinger plan type (shared/cloud vs VPS) — confirm before P3.1. Default plan in `docs/08` assumes shared/cloud.
-- Is Brave Search API's free tier enough for website + LinkedIn lookups at 50 leads/day? Check at P1.6.
+- Is Brave Search API's free tier enough for website + LinkedIn lookups at 50 leads/day? P1.6: the API docs don't state plan quotas — owner to check the Brave dashboard; cap stays 150/day until then.
 
 ## Environment / keys status
 

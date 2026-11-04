@@ -8,6 +8,7 @@ use App\Enums\LeadStatus;
 use App\Enums\PipelineOutcome;
 use App\Enums\PipelineStep;
 use App\Enums\RejectReason;
+use App\Jobs\Enrichment\FindCompanyWebsiteJob;
 use App\Models\Company;
 use App\Models\Person;
 use App\Models\Signal;
@@ -24,6 +25,8 @@ function companyToClassify(array $attributes = [], ?string $adText = null, ?stri
         'pipeline_step' => PipelineStep::Classify,
         'company_type' => CompanyType::Unknown,
         'sic_codes' => ['62012'],
+        'website' => null,
+        'domain' => null,
         ...$attributes,
     ]);
 
@@ -90,5 +93,5 @@ it('runs the officers job result straight through classify', function () {
     $company = runPipeline(companyToClassify(adText: 'Digital agency, Laravel and React.'));
 
     expect($company->pipeline_step)->toBe(PipelineStep::FindWebsite);
-    Queue::assertNothingPushed(); // find_website has no job until P1.6
+    Queue::assertPushed(FindCompanyWebsiteJob::class, fn ($job) => $job->companyId === $company->id);
 });

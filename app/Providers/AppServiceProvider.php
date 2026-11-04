@@ -6,6 +6,7 @@ use App\Enums\ExternalService;
 use App\Services\CompaniesHouse\CompaniesHouseService;
 use App\Services\JobBoards\AdzunaService;
 use App\Services\JobBoards\ReedService;
+use App\Services\Search\BraveSearchService;
 use App\Services\Support\ApiUsageLimiter;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -26,6 +27,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(ReedService::class);
         $this->app->singleton(AdzunaService::class);
         $this->app->singleton(CompaniesHouseService::class);
+        $this->app->singleton(BraveSearchService::class);
     }
 
     /**

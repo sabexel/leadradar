@@ -10,6 +10,7 @@ use App\Enums\PipelineStep;
 use App\Enums\RejectReason;
 use App\Jobs\Enrichment\FetchCompanyOfficersJob;
 use App\Jobs\Enrichment\FetchCompanyProfileJob;
+use App\Jobs\Enrichment\FindCompanyWebsiteJob;
 use App\Jobs\Enrichment\SearchCompaniesHouseJob;
 use App\Models\Company;
 use App\Services\Support\SuppressionList;
@@ -31,6 +32,7 @@ final class AdvanceLeadPipelineAction
     public function __construct(
         private readonly SuppressionList $suppressions,
         private readonly ClassifyCompanyAction $classify,
+        private readonly ApplyWebsiteResultAction $websites,
     ) {}
 
     public function run(Company $company): void
@@ -100,6 +102,15 @@ final class AdvanceLeadPipelineAction
 
                 return true;
 
+            case PipelineStep::FindWebsite:
+                if ($company->website === null) {
+                    return false; // needs the search job
+                }
+
+                $this->websites->applyKnownWebsite($company);
+
+                return true;
+
             default:
                 return false;
         }
@@ -114,7 +125,8 @@ final class AdvanceLeadPipelineAction
             PipelineStep::RegistrySearch => $registry ? new SearchCompaniesHouseJob($company->id) : null,
             PipelineStep::RegistryProfile => $registry ? new FetchCompanyProfileJob($company->id) : null,
             PipelineStep::RegistryOfficers => $registry ? new FetchCompanyOfficersJob($company->id) : null,
-            default => null, // later steps are wired in as they are built (P1.6+)
+            PipelineStep::FindWebsite => new FindCompanyWebsiteJob($company->id),
+            default => null, // later steps are wired in as they are built (P1.7+)
         };
     }
 }

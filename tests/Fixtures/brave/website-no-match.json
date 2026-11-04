@@ -1,0 +1,22 @@
+{
+    "type": "search",
+    "query": {
+        "original": "\"EXAMPLE DIGITAL LTD\" Manchester",
+        "more_results_available": false
+    },
+    "web": {
+        "type": "search",
+        "results": [
+            {
+                "title": "EXAMPLE DIGITAL LTD - Endole",
+                "url": "https://suite.endole.co.uk/insight/company/01234567-example-digital-ltd",
+                "description": "Example Digital Ltd company profile."
+            },
+            {
+                "title": "Top 10 Web Agencies in Manchester",
+                "url": "https://www.sample-rankings.test/manchester-web-agencies",
+                "description": "Our pick of the best digital agencies in the North West."
+            }
+        ]
+    }
+}

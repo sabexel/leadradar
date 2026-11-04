@@ -179,3 +179,18 @@
   `find_website`). 253 passing; Pint, Larastan, vp check, tsc clean.
 - Decisions: D48–D51. Known issue added ("studio" names).
 - Notes / follow-ups: companies now stop at `find_website` until P1.6.
+
+## 2026-11-04 — P1.6 BraveSearchService::findCompanyWebsite() + FindCompanyWebsiteJob
+- Done: DTO `SearchResult`; `App\Services\Search\BraveSearchService` (`findCompanyWebsite`); local
+  `WebsiteSelector` (blocklist + significant-token match); `ApplyWebsiteResultAction` (search result or known
+  website → `website`/`domain`/`crawl`, one-domain-one-lead guard); `FindCompanyWebsiteJob` (`web` queue,
+  `RateLimited('brave')`); `find_website` wired into `AdvanceLeadPipelineAction` (local when the site is known).
+  Blocklist in `config/services.php`.
+- Tests: `tests/Unit/Search/WebsiteSelectorTest.php` (tokens, blocklist incl. subdomains/gov.uk, Endole first →
+  skipped and real site chosen, domain-only match, unrelated rejected, no partial-word match) and
+  `tests/Feature/Jobs/FindCompanyWebsiteJobTest.php` (query/headers, directory-first fixture, no result →
+  `no_website`, suppressed domain, domain owned by another lead, cap release, known website skips the search,
+  queued by the pipeline, step guard). Classify + CH tests updated (companies without a website now queue the
+  search). 279 passing; Pint, Larastan, vp check, tsc clean.
+- Decisions: D52–D55. Brave open question updated.
+- Notes / follow-ups: companies now stop at `crawl` until P1.7.

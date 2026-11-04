@@ -55,6 +55,8 @@ function companyAtStep(PipelineStep $step, array $attributes = []): Company
         'sic_codes' => null,
         'accounts_category' => null,
         'location' => null,
+        'website' => null,
+        'domain' => null,
         ...$attributes,
     ]);
 }
