@@ -8,14 +8,14 @@
 ## Current status
 
 - **Phase:** P1 — in progress
-- **Last completed task:** P1.4 Companies House (search, profile, officers) + jobs
-- **Working on:** P1.5
+- **Last completed task:** P1.5 Company classifier + offshore detector (text)
+- **Working on:** P1.6
 - **Blocked by:** — (building with faked APIs; owner is registering API keys)
 
 ## Next step
 
-1. **P1.5** — `CompanyClassifier` (agency / direct_client / recruiter / offshore / unknown from SIC + name, later + crawl text) + `OffshoreSignalDetector` (text part); `RecruiterDetector::hasRecruiterSicCode()` already exists. Wire the `classify` step into `AdvanceLeadPipelineAction` (sync, no job): recruiter → `rejected(recruiter)`, else → `find_website`. Companies now arrive at `classify` after the officers step.
-2. Owner: put API keys in `.env`; then verify Reed JSON keys (D23), Adzuna limits (D31) and one Companies House search with one live call each.
+1. **P1.6** — `BraveSearchService::findCompanyWebsite()` + `FindCompanyWebsiteJob` (`web` queue, `RateLimited('brave')`, daily cap `cap.brave.per_day`); directory blocklist (Companies House, Endole, LinkedIn, Facebook, Indeed, Reed, Glassdoor, Yell, Clutch, Bloomberg, Crunchbase…); result must contain a significant name token. Set `website` + `domain` (unique — handle a domain already owned by another company), then the suppression gate catches suppressed domains. Skip the job when `website` is already known. No result → `rejected(no_website)`. Wire `find_website` into `AdvanceLeadPipelineAction`. Check the Brave API docs + free-tier limits first (open question in BRAIN).
+2. Owner: put API keys in `.env`; verify Reed JSON keys (D23), Adzuna limits (D31), one Companies House search.
 3. Confirm the Hostinger plan offers PHP 8.4+ (D30).
 
 ---
@@ -37,7 +37,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 - [x] P1.2 `AdzunaService` + `FetchAdzunaJobsJob`
 - [x] P1.3 `IngestJobAdAction` (dedupe, recruiter filter, create/attach Company)
 - [x] P1.4 `CompaniesHouseService` (search, profile, officers) + jobs
-- [ ] P1.5 `CompanyClassifier` (agency / direct client / recruiter / offshore) from SIC + text
+- [x] P1.5 `CompanyClassifier` (agency / direct client / recruiter / offshore) from SIC + text
 - [ ] P1.6 `BraveSearchService::findCompanyWebsite()` + job
 - [ ] P1.7 `WebsiteCrawlerService` (pages, emails, Laravel signals, offshore signals) + job
 - [ ] P1.8 `EmailPatternService` (local) — candidate founder emails
@@ -120,6 +120,10 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 | D45 | 2026-11-04 | Officers: founder roles = `director`, `llp-member`, `llp-designated-member` (natural persons only; secretaries and `corporate-*` excluded). All stored with `source = companies_house` + `source_url` = public CH officers page; active ones get positions 1..n by earliest `appointed_on`, resigned ones are kept with `position = null`. The `Officer` DTO has no DOB, nationality or address fields at all. People upsert key = company + source + first + last + appointed_on | docs/04 + docs/09 (never store DOB); a re-run gives identical rows |
 | D46 | 2026-11-04 | Enrichment jobs bail unless `Company::isAwaiting(step)`; final failure → `status = error` + failed event (`FailsCompanyStep` trait). `AdvanceLeadPipelineAction` sets `enriching` when it queues the first job; registry steps only run for `country = GB` | Idempotent jobs; docs/05 "failed job → error, Retry step" |
 | D47 | 2026-11-04 | `ExternalApiService::get(..., allowNotFound: true)` returns 404s to the caller; CH profile/officers 404 → null → `rejected(not_on_registry)` | A missing company is data, not a service failure |
+| D48 | 2026-11-04 | Offshore = any **strong** signal, or **two different medium** ones. `OffshoreSignalDetector`: offshore country/city + outsourcing phrase in the same text = medium `offshore_office`; outsourcing phrase alone = weak; "hire/dedicated developer … $£€N/hour" = strong `hourly_rate_pricing`; every officer with a known residence outside the UK = medium `officers_abroad`, upgraded to strong when any text signal exists. All signals are stored in `offshore_evidence` ({type, weight, detail, url}) even when not rejected | docs/04 rules made concrete; one medium hint (e.g. a UK agency with a partner office) must not reject a good lead |
+| D49 | 2026-11-04 | A strong offshore signal already in the job-ad text rejects at the **first** classify (docs/05 only rejects after the crawl). The crawl re-runs `ClassifyCompanyAction` with page text in P1.7 | Saves Brave, crawl and MillionVerifier spend on competitors |
+| D50 | 2026-11-04 | `CompanyClassifier` order: recruiter (name or SIC 78xxx) → offshore → agency (explicit "digital/web/creative/development/software/design/marketing/branding/e-commerce agency/studio" phrase, **or** agency language + one of the 7 agency SIC codes from docs/04) → direct_client (has a job ad, no agency language) → unknown. Input is a plain `ClassificationInput` DTO | Unit-testable without the DB; same classifier runs again with crawl text later |
+| D51 | 2026-11-04 | `AdvanceLeadPipelineAction` runs local steps inline in a loop (max 10) until a step needs a job or the company finishes; `classify` → `find_website` | Jobs stay "one call"; a job's hand-over carries the company through every following local step |
 
 ## Open questions
 
@@ -141,3 +145,4 @@ Record only **whether** a key is configured — never the value.
 ## Known issues
 
 - `RecruiterDetector` flags any employer with the whole word "people" (spec keyword), e.g. a studio called "Good People Digital". Revisit if real data shows false positives.
+- `CompanyClassifier` treats "studio" (also in a company name) as agency language, so a product company called "… Studio Ltd" with an agency SIC is classified `agency` until crawl text says otherwise (P1.7).

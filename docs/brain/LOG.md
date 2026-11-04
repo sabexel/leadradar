@@ -165,3 +165,17 @@
   queued search. 226 passing; Pint, Larastan, vp check, tsc clean.
 - Decisions: D40–D47.
 - Notes / follow-ups: companies now stop at `classify` until P1.5 wires it in.
+
+## 2026-11-04 — P1.5 CompanyClassifier + RecruiterDetector + OffshoreSignalDetector (text)
+- Done: enum `SignalWeight`; DTOs `DetectedSignal`, `ClassificationInput`, `Classification`;
+  local `App\Services\Crawler\OffshoreSignalDetector` (`detectInText`, `detectOfficersAbroad`, `combine`);
+  local `App\Services\Classification\CompanyClassifier`; `ClassifyCompanyAction` (stores `company_type` +
+  `offshore_evidence`, rejects recruiter/offshore, records the classify event). `AdvanceLeadPipelineAction`
+  now loops through local steps; `classify` → `find_website`. (`RecruiterDetector` came in P1.3.)
+- Tests: `tests/Unit/Classification/OffshoreSignalDetectorTest.php`, `CompanyClassifierTest.php` (agency,
+  explicit agency, direct client, recruiter by name/SIC, offshore ×3, one medium signal is not offshore, officers
+  abroad alone is not offshore, unknown ×2) with text fixtures in `tests/Fixtures/classification/`;
+  `tests/Feature/Actions/ClassifyStepTest.php` (pipeline wiring). CH officers test updated (now continues to
+  `find_website`). 253 passing; Pint, Larastan, vp check, tsc clean.
+- Decisions: D48–D51. Known issue added ("studio" names).
+- Notes / follow-ups: companies now stop at `find_website` until P1.6.

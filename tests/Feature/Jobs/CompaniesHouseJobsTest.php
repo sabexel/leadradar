@@ -257,8 +257,10 @@ it('stores directors, picks the earliest-appointed active ones as founders, and 
         ->and($people->first()->source_url)->toBe('https://find-and-update.company-information.service.gov.uk/company/01234567/officers')
         ->and(array_keys($people->first()->getAttributes()))->not->toContain('date_of_birth')
         ->and(json_encode($people->toArray()))->not->toContain('1985')
-        ->and($company->pipeline_step)->toBe(PipelineStep::Classify)
-        ->and($company->pipelineEvents()->sole()->context)->toBe(['active' => 3, 'resigned' => 1]);
+        // The pipeline then runs the local classify step straight away and stops at find_website.
+        ->and($company->pipeline_step)->toBe(PipelineStep::FindWebsite)
+        ->and($company->pipelineEvents()->where('step', PipelineStep::RegistryOfficers)->sole()->context)->toBe(['active' => 3, 'resigned' => 1])
+        ->and($company->pipelineEvents()->where('step', PipelineStep::Classify)->exists())->toBeTrue();
 });
 
 it('is idempotent when the officers step runs twice', function () {

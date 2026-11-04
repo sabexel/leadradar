@@ -1,0 +1,2 @@
+Laravel Developer
+Example Digital is a small web agency in Manchester. You will build Laravel and Inertia platforms for our clients, from e-commerce sites to booking systems, alongside our design team.
