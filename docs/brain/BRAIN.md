@@ -8,13 +8,13 @@
 ## Current status
 
 - **Phase:** P1 — in progress
-- **Last completed task:** P1.11 Lead scoring + qualification
-- **Working on:** P1.12
+- **Last completed task:** P1.12 Complete pipeline state machine + retry step
+- **Working on:** P1.13
 - **Blocked by:** — (building with faked APIs; owner is registering API keys)
 
 ## Next step
 
-1. **P1.12** — finish `AdvanceLeadPipelineAction` as the complete state machine: every step is now wired (registry → classify → website → crawl → candidates → verify → LinkedIn → qualify → done); add **retry-from-step** (an action that resets an `error` company to `enriching` at a given step and advances it) and make sure every transition writes a PipelineEvent. Acceptance: one feature test where a fake company goes `discovered → qualified` with ALL HTTP faked (Reed/CH/Brave/site/MillionVerifier), and one that fails at each gate.
+1. **P1.13** — commands `leadradar:discover` (create `ScrapeRun`; stop with `stopped_target_reached` when today's qualified ≥ `daily_qualified_target`; else dispatch `FetchReedJobsJob` + `FetchAdzunaJobsJob` page 1 per `search.keywords`), `leadradar:close-runs` (finalise counts when the run's queue work is done), `leadradar:rescore` (re-run `QualifyCompanyAction` for non-rejected companies); schedule per docs/08 in `routes/console.php` (queue:work every minute, discover 06:10 London, close-runs every 15 min, prune). Acceptance: when today's qualified ≥ target, discover exits without dispatching.
 2. Owner: put API keys in `.env`; one live call each to confirm Reed JSON keys (D23), Adzuna limits (D31), CH search, Brave query + quota, MillionVerifier result values (D67).
 3. Owner: publish https://webwayout.co.uk/bot (crawler UA points there, docs/09).
 4. Confirm the Hostinger plan offers PHP 8.4+ (D30).
@@ -45,7 +45,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 - [x] P1.9 `MillionVerifierService` + `VerifyEmailJob` (stop at first `ok`, honour credit cap)
 - [x] P1.10 `BraveSearchService::findLinkedInProfile()` + job
 - [x] P1.11 `LeadScoringService` + gates (sync) → status `qualified` / `rejected`
-- [ ] P1.12 `AdvanceLeadPipelineAction` state machine wiring all steps
+- [x] P1.12 `AdvanceLeadPipelineAction` state machine wiring all steps
 - [ ] P1.13 Scheduler: daily discovery run, stops at daily qualified target
 - [ ] P1.14 Suppression list + CSV import of already-contacted companies
 
@@ -149,6 +149,8 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 | D73 | 2026-11-04 | Scoring inputs: "Laravel job ad" = a Reed/Adzuna signal linked to the company whose title/description says "Laravel"; "Laravel on services/case studies/careers" = a `laravel_mention` with weight `strong` (D57); "site runs Laravel" = `runs_laravel` / `livewire` / `inertia`. The Laravel gate = such an ad or any strong evidence | docs/06 table mapped onto the stored evidence |
 | D74 | 2026-11-04 | Timing = whole days on the London calendar between the newest Laravel ad's `posted_at` and today (≤ 7 → 2.0, ≤ 14 → 1.5, ≤ 30 → 1.0). Founder 1 `catch_all` scores +0.5 whatever its origin (only the *gate* needs it crawled). "Founder 2 identified with any email" = Founder 2 has an `email_id` (any status) | docs/06 wording applied literally |
 | D75 | 2026-11-04 | `QualifyCompanyAction`: gates in docs/06 table order (first failure is the reject reason); non-UK companies fail `not_on_registry` until P4.2; the score + breakdown (incl. `failed_gate`, timing `days_old`) is always stored; `qualified_at` is kept on a rescore; step → `done` | Rescore must not move a lead into "qualified today" again |
+| D76 | 2026-11-04 | `RetryPipelineStepAction`: only `error` or `rejected` companies (never qualified/suppressed); default step = where it stopped (`done` → `qualify`); resets what the step remembers — crawl: delete crawled pages + forget cached robots.txt; find_linkedin: clear `linkedin_checked_at` for founders without a URL; find_website: clear website/domain — then status `enriching`, a "Retry requested" event, and advance | docs/05 "Retry step"; also the cure for the robots-5xx known issue |
+| D77 | 2026-11-04 | A new company's first timeline entry is "Discovered from {source} ad "{title}"" (step `registry_search`), written by `IngestJobAdAction` | Every lead's timeline starts with why we found it |
 
 ## Open questions
 
@@ -171,4 +173,4 @@ Record only **whether** a key is configured — never the value.
 
 - `RecruiterDetector` flags any employer with the whole word "people" (spec keyword), e.g. a studio called "Good People Digital". Revisit if real data shows false positives.
 - `CompanyClassifier` treats "studio" (also in a company name) as agency language, so a product company called "… Studio Ltd" with an agency SIC is classified `agency` until crawl text says otherwise (P1.7).
-- A robots.txt answering 5xx means "disallow all" (RFC 9309), so that lead's site is skipped for good (no later re-crawl yet). Revisit with a re-crawl action on the dashboard (P2.3).
+- A robots.txt answering 5xx means "disallow all" (RFC 9309), so that lead's site is skipped. `RetryPipelineStepAction` from `crawl` re-fetches robots.txt and re-crawls (D76); the dashboard button comes in P2.3.

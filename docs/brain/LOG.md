@@ -266,3 +266,18 @@
   `done`. 447 passing; Pint, Larastan clean.
 - Decisions: D72–D75.
 - Notes / follow-ups: P1.12 adds retry-from-step and the end-to-end pipeline test.
+
+## 2026-11-04 — P1.12 AdvanceLeadPipelineAction complete + retry-from-step
+- Done: every step is wired (registry → classify → website → crawl → candidates → verify → LinkedIn → qualify
+  → done) and every transition writes a PipelineEvent; `IngestJobAdAction` adds the "Discovered from…" event;
+  `RetryPipelineStepAction` (retry an errored/rejected company from a step, with per-step resets);
+  `RobotsTxtGuard::forget()`.
+- Tests: `tests/Feature/Pipeline/FullPipelineTest.php` (17): one Reed ad → qualified 10.0 with every external
+  system faked by one router (Reed, CH, Brave, company site, MillionVerifier); timeline has all 10 steps in
+  order; only official APIs + the company's own site are called and every call is logged in `api_usages`;
+  nine gate failures end-to-end (not on registry, not active, wrong legal form, dormant, recruiter, offshore, no
+  website, no valid email, no Laravel evidence); suppressed domain stops before the crawl; retry from a failed
+  step; retry crawl re-fetches robots + re-crawls; qualified/suppressed cannot be retried. 464 passing; Pint,
+  Larastan, vp check, tsc clean.
+- Decisions: D76, D77. Known issue (robots 5xx) updated.
+- Notes / follow-ups: P1.13 adds the scheduler/commands that start runs.

@@ -6,6 +6,7 @@ namespace App\Actions;
 
 use App\DTOs\JobBoards\JobAdData;
 use App\Enums\LeadStatus;
+use App\Enums\PipelineOutcome;
 use App\Enums\PipelineStep;
 use App\Models\Company;
 use App\Models\ScrapeRun;
@@ -95,6 +96,10 @@ final class IngestJobAdAction
 
         // Existing companies are already in (or past) the pipeline; a new signal just adds evidence.
         if ($created) {
+            $company->recordEvent(PipelineStep::RegistrySearch, PipelineOutcome::Ok, "Discovered from {$ad->source->value} ad \"{$ad->title}\"", [
+                'signal_id' => $signal->id,
+            ]);
+
             $this->advance->run($company);
         }
 

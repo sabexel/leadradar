@@ -109,6 +109,11 @@ final class RobotsTxtGuard
         return is_array($data) ? RobotsRules::fromArray($data) : null;
     }
 
+    public function forget(string $domain): void
+    {
+        Cache::forget($this->rulesKey($domain));
+    }
+
     public function remember(string $domain, RobotsRules $rules): void
     {
         Cache::put($this->rulesKey($domain), $rules->toArray(), now()->addHours((int) config('services.crawler.robots_cache_hours', 24)));
