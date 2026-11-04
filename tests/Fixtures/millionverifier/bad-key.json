@@ -1,0 +1,14 @@
+{
+    "email": "",
+    "quality": "",
+    "result": "",
+    "resultcode": 0,
+    "subresult": "",
+    "free": false,
+    "role": false,
+    "didyoumean": "",
+    "credits": 0,
+    "executiontime": 0,
+    "error": "Invalid API key",
+    "livemode": false
+}

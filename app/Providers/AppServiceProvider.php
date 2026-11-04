@@ -9,6 +9,7 @@ use App\Services\JobBoards\AdzunaService;
 use App\Services\JobBoards\ReedService;
 use App\Services\Search\BraveSearchService;
 use App\Services\Support\ApiUsageLimiter;
+use App\Services\Verification\MillionVerifierService;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\Date;
@@ -30,6 +31,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(CompaniesHouseService::class);
         $this->app->singleton(BraveSearchService::class);
         $this->app->singleton(WebsiteCrawlerService::class);
+        $this->app->singleton(MillionVerifierService::class);
     }
 
     /**

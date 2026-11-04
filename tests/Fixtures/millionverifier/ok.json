@@ -1,0 +1,14 @@
+{
+    "email": "jane.example@example-digital.test",
+    "quality": "good",
+    "result": "ok",
+    "resultcode": 1,
+    "subresult": "ok",
+    "free": false,
+    "role": false,
+    "didyoumean": "",
+    "credits": 3454,
+    "executiontime": 2,
+    "error": "",
+    "livemode": true
+}

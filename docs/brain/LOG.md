@@ -227,3 +227,17 @@
   Larastan, vp check clean.
 - Decisions: D63–D66.
 - Notes / follow-ups: companies now stop at `verify_emails` until P1.9.
+
+## 2026-11-04 — P1.9 MillionVerifierService + VerifyEmailJob
+- Done: DTO `EmailVerificationResult`; `App\Services\Verification\MillionVerifierService` (`verify`, `credits`);
+  local `VerificationPlanner` (next address worth a credit); `ApplyVerificationResultAction` (`apply` per result,
+  `finish` = best address per founder + event → `find_linkedin`); `VerifyEmailJob` (`verify` queue,
+  `RateLimited('millionverifier')`); `verify_emails` wired into `AdvanceLeadPipelineAction`.
+- Tests: `tests/Feature/Services/MillionVerifierServiceTest.php` (params, every result value, 1 credit logged,
+  bad key, empty balance, cap, free credits call) and `tests/Feature/Jobs/VerifyEmailJobTest.php` (stop at first
+  ok per founder, crawled first, inboxes, catch-all domain stop, all invalid → no address, 90-day window,
+  cap → released not failed, empty balance → released, no second credit on re-run, nothing to verify, queue).
+  Fixtures `tests/Fixtures/millionverifier/`. 373 passing; Pint, Larastan, vp check, tsc clean.
+- Decisions: D67–D70.
+- Notes / follow-ups: confirm MillionVerifier result values/error texts with the demo key (D67). Companies now
+  stop at `find_linkedin` until P1.10.

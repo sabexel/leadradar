@@ -8,14 +8,14 @@
 ## Current status
 
 - **Phase:** P1 — in progress
-- **Last completed task:** P1.8 Founder email patterns
-- **Working on:** P1.9
+- **Last completed task:** P1.9 MillionVerifier email verification
+- **Working on:** P1.10
 - **Blocked by:** — (building with faked APIs; owner is registering API keys)
 
 ## Next step
 
-1. **P1.9** — `MillionVerifierService::verify(email)` → `EmailVerificationResult` + `VerifyEmailJob` (`verify` queue, `RateLimited('millionverifier')`, daily cap `cap.millionverifier.per_day`, 1 credit per call; cap reached → released, not failed). Order: crawled person emails first, then each founder's generated candidates by id (= try-order, D65); stop for a person at the first `ok` (set `people.email_id`); also verify the contact + careers inboxes; never re-verify within 90 days (`services.millionverifier.reverify_after_days`). Wire `verify_emails` → `find_linkedin`. Check MillionVerifier API docs (endpoint, result values) first.
-2. Owner: put API keys in `.env`; verify Reed JSON keys (D23), Adzuna limits (D31), one CH search, one Brave query + Brave quota (open question).
+1. **P1.10** — `BraveSearchService::findLinkedInProfile(fullName, companyName)` (`site:linkedin.com/in "{full name}" "{company}"`; accept only `linkedin.com/in/...` URLs whose title contains first + last name; store `linkedin_url` + `linkedin_source_url`, never fetch LinkedIn) + `FindLinkedInProfileJob` (one person per job, `web` queue, `RateLimited('brave')`, Brave daily cap). Founder 1 then Founder 2; skip people who already have a URL. Wire `find_linkedin` → `qualify`.
+2. Owner: put API keys in `.env`; one live call each to confirm Reed JSON keys (D23), Adzuna limits (D31), CH search, Brave query + quota, and MillionVerifier result values/error texts with `API_KEY_FOR_TEST` (D67).
 3. Owner: publish https://webwayout.co.uk/bot (crawler UA points there, docs/09).
 4. Confirm the Hostinger plan offers PHP 8.4+ (D30).
 
@@ -42,7 +42,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 - [x] P1.6 `BraveSearchService::findCompanyWebsite()` + job
 - [x] P1.7 `WebsiteCrawlerService` (pages, emails, Laravel signals, offshore signals) + job
 - [x] P1.8 `EmailPatternService` (local) — candidate founder emails
-- [ ] P1.9 `MillionVerifierService` + `VerifyEmailJob` (stop at first `ok`, honour credit cap)
+- [x] P1.9 `MillionVerifierService` + `VerifyEmailJob` (stop at first `ok`, honour credit cap)
 - [ ] P1.10 `BraveSearchService::findLinkedInProfile()` + job
 - [ ] P1.11 `LeadScoringService` + gates (sync) → status `qualified` / `rejected`
 - [ ] P1.12 `AdvanceLeadPipelineAction` state machine wiring all steps
@@ -140,6 +140,10 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 | D64 | 2026-11-04 | `EmailPatternService`: names = (`preferred_name` ?: `first_name`) + `last_name`, reduced to lowercase ASCII letters ("José O'Example-Smith" → `jose` / `oexamplesmith`). The company's convention = the most common pattern among its person-linked addresses that were crawled or verified `ok`; it goes first, the rest keep docs/04 order | docs/04 rules; a crawled address is as good as a verified one for learning the convention |
 | D65 | 2026-11-04 | Candidates only for Founder 1/2 (active, positions 1–2); a founder with any crawled or `ok` address gets none. Rows are `kind = person`, `origin = generated`, `source_url = null`, created in try-order — **id order is the verification order** for P1.9 | Keeps MillionVerifier spend to the two people we would email; no separate rank column needed |
 | D66 | 2026-11-04 | A generated address that is on the suppression list suppresses the company (existing gate in `AdvanceLeadPipelineAction`) | An opted-out founder means no outreach to that company |
+| D67 | 2026-11-04 | MillionVerifier: `GET /api/v3/?api=&email=&timeout=10` (docs: timeout 2–60). `result` → `ok` / `catch_all` / `unknown` / `invalid` / `disposable`, anything else → `error`. Account errors come as a non-empty `error` text: containing "credit" → `DailyCapReachedException` (job released to 06:00, lead untouched); anything else (bad key…) → `ExternalServiceException`. `verification_raw` keeps result/resultcode/subresult/quality/free/role/didyoumean/executiontime (not the balance). `credits()` = `/api/v3/credits`, cost 0 | The public docs page confirmed endpoint + fields but its result-code and error sections were cut off; values follow MillionVerifier's v3 API as known — confirm with the `API_KEY_FOR_TEST` demo key |
+| D68 | 2026-11-04 | `VerificationPlanner` order: Founder 1, Founder 2 (crawled addresses before guesses, guesses by id = D65 try-order; a founder is done at the first `ok`), then the contact and careers inboxes. Skips anything verified within `reverify_after_days` (90). Once any address on a domain answers `catch_all`, nothing else on that domain is verified | docs/05 order; catch-all servers accept every address, so further guesses waste credits |
+| D69 | 2026-11-04 | At the end of `verify_emails` each founder's `email_id` = best address: `ok` > `catch_all` > `unknown` > unverified **crawled**; ties → crawled first, then try-order. Invalid, disposable, error and unverified guesses are never picked; no candidate → `email_id = null` | Feeds the score (Founder 1 `ok` +1.5, `catch_all` +0.5) and the "contactable" gate |
+| D70 | 2026-11-04 | `VerifyEmailJob(companyId, emailAddressId)` — one address, one credit; unique per address; a re-run finds the address freshly verified and spends nothing | docs/05 one call per job + idempotency |
 
 ## Open questions
 

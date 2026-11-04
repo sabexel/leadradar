@@ -13,9 +13,11 @@ use App\Jobs\Enrichment\FetchCompanyOfficersJob;
 use App\Jobs\Enrichment\FetchCompanyProfileJob;
 use App\Jobs\Enrichment\FindCompanyWebsiteJob;
 use App\Jobs\Enrichment\SearchCompaniesHouseJob;
+use App\Jobs\Enrichment\VerifyEmailJob;
 use App\Models\Company;
 use App\Services\Crawler\CrawlPlanner;
 use App\Services\Support\SuppressionList;
+use App\Services\Verification\VerificationPlanner;
 
 /**
  * Local state machine: decides the next pipeline step for a company (docs/05).
@@ -38,6 +40,8 @@ final class AdvanceLeadPipelineAction
         private readonly ApplyCrawlResultAction $crawl,
         private readonly CrawlPlanner $crawlPlanner,
         private readonly BuildFounderEmailCandidatesAction $emailCandidates,
+        private readonly VerificationPlanner $verificationPlanner,
+        private readonly ApplyVerificationResultAction $verification,
     ) {}
 
     public function run(Company $company): void
@@ -130,6 +134,15 @@ final class AdvanceLeadPipelineAction
 
                 return true;
 
+            case PipelineStep::VerifyEmails:
+                if ($this->verificationPlanner->next($company) !== null) {
+                    return false; // more addresses worth a credit
+                }
+
+                $this->verification->finish($company);
+
+                return true;
+
             default:
                 return false;
         }
@@ -146,7 +159,8 @@ final class AdvanceLeadPipelineAction
             PipelineStep::RegistryOfficers => $registry ? new FetchCompanyOfficersJob($company->id) : null,
             PipelineStep::FindWebsite => new FindCompanyWebsiteJob($company->id),
             PipelineStep::Crawl => ($url = $this->crawlPlanner->next($company)) === null ? null : new CrawlCompanyWebsiteJob($company->id, $url),
-            default => null, // later steps are wired in as they are built (P1.9+)
+            PipelineStep::VerifyEmails => ($email = $this->verificationPlanner->next($company)) === null ? null : new VerifyEmailJob($company->id, $email->id),
+            default => null, // later steps are wired in as they are built (P1.10+)
         };
     }
 }
