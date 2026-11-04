@@ -12,7 +12,7 @@
 
 ## Shared/Cloud hosting setup
 
-1. hPanel → PHP version **8.3+**; enable extensions: `pdo_mysql`, `mbstring`, `intl`, `curl`, `dom`, `fileinfo`, `zip`.
+1. hPanel → PHP version **8.4+** (BRAIN D30); enable extensions: `pdo_mysql`, `mbstring`, `intl`, `curl`, `dom`, `fileinfo`, `zip`.
 2. hPanel → Databases → create MySQL DB + user. From the app use host `127.0.0.1` (or `localhost`), port 3306.
 3. Point the domain/subdomain (e.g. `leads.webwayout.co.uk`) document root at `…/leadradar/public`.
 4. SSH in, clone the repo **outside** `public_html` if the panel allows, `composer install --no-dev --optimize-autoloader`.

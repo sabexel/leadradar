@@ -29,7 +29,7 @@ runs on shared hosting via a cron-driven queue worker.
 
 ## Setup
 
-Requires PHP 8.3+, Composer, Node 22+ and Docker (for the local MySQL 8 container).
+Requires PHP 8.4+, Composer, Node 22+ and Docker (for the local MySQL 8 container).
 
 ```bash
 git clone https://github.com/<you>/leadradar.git && cd leadradar

@@ -58,7 +58,7 @@ Never end a session with code changes that are not reflected in the brain.
 
 ## 5. Conventions
 
-- PHP 8.3+, latest stable Laravel, official **React starter kit** (Inertia + React + TypeScript + Tailwind + shadcn/ui).
+- PHP 8.4+ (see BRAIN D30), latest stable Laravel, official **React starter kit** (Inertia + React + TypeScript + Tailwind + shadcn/ui).
 - MySQL 8. Queue driver: `database`. Cache: `database` (no Redis on shared hosting).
 - Pest for tests. Laravel Pint for formatting (`./vendor/bin/pint`). Larastan level 6+.
 - PHP enums for every status/type field. DTOs (readonly classes) for every service response.
