@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Enums\CompanyType;
 use App\Enums\LeadStatus;
 use App\Enums\OutreachStatus;
+use App\Enums\PipelineOutcome;
 use App\Enums\PipelineStep;
 use App\Enums\RejectReason;
 use Database\Factories\CompanyFactory;
@@ -166,6 +167,21 @@ class Company extends Model
     public function pipelineEvents(): HasMany
     {
         return $this->hasMany(PipelineEvent::class);
+    }
+
+    /**
+     * Write one timeline entry (docs/05: every transition writes a PipelineEvent).
+     *
+     * @param  array<string, mixed>|null  $context
+     */
+    public function recordEvent(PipelineStep $step, PipelineOutcome $outcome, ?string $message = null, ?array $context = null): PipelineEvent
+    {
+        return $this->pipelineEvents()->create([
+            'step' => $step,
+            'outcome' => $outcome,
+            'message' => $message,
+            'context' => $context,
+        ]);
     }
 
     /**

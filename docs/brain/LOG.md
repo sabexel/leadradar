@@ -131,3 +131,19 @@
 - Decisions: none.
 - Notes / follow-ups: run `npx vp check` locally before every push — it also formats JSON fixtures.
   GitHub returned intermittent HTTP 500s on push today; a plain retry works.
+
+## 2026-11-04 — P1.3 IngestJobAdAction (recruiter filter, dedupe, company creation)
+- Done: local `App\Services\Dedupe\CompanyMatcher` (`normalise`, Jaro-Winkler `similarity`, `domainOf`),
+  `App\Services\Classification\RecruiterDetector` (name patterns, "on behalf of a client" ad text, SIC 78xxx),
+  `App\Services\Support\SuppressionList`; first cut of `AdvanceLeadPipelineAction` (finished guard + suppression
+  gate); `Company::recordEvent()`. `IngestJobAdAction` now: recruiter skip → lock + transaction → match on
+  normalised name or create `discovered` company → Signal upsert linked to it → run counters
+  (`signals_found`, `companies_created`) → advance new companies only.
+- Tests: `tests/Unit/Dedupe/CompanyMatcherTest.php`, `tests/Unit/Classification/RecruiterDetectorTest.php`,
+  `tests/Feature/Actions/IngestJobAdActionTest.php` (same ad twice → 1 signal + 1 company; name variants and
+  sources merge; different employers stay apart; recruiter → nothing stored; existing rejected company untouched),
+  `tests/Feature/Actions/AdvanceLeadPipelineActionTest.php` (suppress by domain/number/email, event context,
+  finished statuses untouched). Adzuna job tests updated: recruiter fixture ad now skipped. 191 passing;
+  Pint, Larastan, vp check clean.
+- Decisions: D35–D39. Known issue added ("people" keyword).
+- Notes / follow-ups: P1.4 wires the registry steps into `AdvanceLeadPipelineAction`.

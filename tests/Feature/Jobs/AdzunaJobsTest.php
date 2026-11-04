@@ -30,15 +30,18 @@ function runAdzunaPage(FetchAdzunaJobsJob $job): FetchAdzunaJobsJob
     return $job;
 }
 
-it('ingests fresh ads as signals and queues the next page', function () {
+it('ingests fresh direct-employer ads, skips recruiters, and queues the next page', function () {
     $run = ScrapeRun::factory()->create();
     Http::fake(['*' => Http::response(jsonFixture('adzuna/search.json'))]); // count = 120
 
     runAdzunaPage(new FetchAdzunaJobsJob('laravel', 1, $run->id));
 
-    expect(Signal::where('source', SignalSource::Adzuna)->pluck('external_id')->sort()->values()->all())
-        ->toBe(['4900000001', '4900000002'])
-        ->and($run->refresh()->signals_found)->toBe(2);
+    // 4900000002 is "Sample Example Recruitment" → skipped by RecruiterDetector.
+    expect(Signal::where('source', SignalSource::Adzuna)->pluck('external_id')->all())
+        ->toBe(['4900000001'])
+        ->and(Company::pluck('name')->all())->toBe(['Example Pixel Studio Ltd'])
+        ->and($run->refresh()->signals_found)->toBe(1)
+        ->and($run->companies_created)->toBe(1);
 
     Queue::assertPushed(FetchAdzunaJobsJob::class, fn ($job) => $job->page === 2 && $job->scrapeRunId === $run->id);
 });
@@ -50,8 +53,10 @@ it('is idempotent when the same page runs twice', function () {
     runAdzunaPage(new FetchAdzunaJobsJob('laravel', 1, $run->id));
     runAdzunaPage(new FetchAdzunaJobsJob('laravel', 1, $run->id));
 
-    expect(Signal::count())->toBe(2)
-        ->and($run->refresh()->signals_found)->toBe(2);
+    expect(Signal::count())->toBe(1)
+        ->and(Company::count())->toBe(1)
+        ->and($run->refresh()->signals_found)->toBe(1)
+        ->and($run->companies_created)->toBe(1);
 });
 
 it('skips ads older than signal.max_age_days and passes the limit to Adzuna', function () {

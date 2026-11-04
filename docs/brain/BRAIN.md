@@ -8,14 +8,14 @@
 ## Current status
 
 - **Phase:** P1 — in progress
-- **Last completed task:** P1.2 Adzuna service + job
-- **Working on:** P1.3
+- **Last completed task:** P1.3 Ingest (recruiter filter, dedupe, company creation)
+- **Working on:** P1.4
 - **Blocked by:** — (building with faked APIs; owner is registering API keys)
 
 ## Next step
 
-1. **P1.3** — complete `IngestJobAdAction`: `RecruiterDetector` skip (Adzuna includes recruiter ads, e.g. fixture `Sample Example Recruitment`), `CompanyMatcher` dedupe, suppression check, create Company (`discovered`), hand over to `AdvanceLeadPipelineAction`. Update the Reed/Adzuna job tests that currently expect recruiter ads to become Signals.
-2. Owner: put API keys in `.env`; then verify Reed JSON keys (D23) and the Adzuna limits shown in the Adzuna account (D31) with one live call each.
+1. **P1.4** — `CompaniesHouseService` (`searchCompanies`, `getProfile`, `getOfficers`) + DTOs + `SearchCompaniesHouseJob`, `FetchCompanyProfileJob`, `FetchCompanyOfficersJob` + `ApplyCompaniesHouseResultAction`; wire the three registry steps into `AdvanceLeadPipelineAction` (the suppression gate there then also catches suppressed company numbers). Matching via `CompanyMatcher::similarity() ≥ 0.85` + active. Don't store DOB. Confirm CH API docs first.
+2. Owner: put API keys in `.env`; then verify Reed JSON keys (D23) and Adzuna limits (D31) with one live call each.
 3. Confirm the Hostinger plan offers PHP 8.4+ (D30).
 
 ---
@@ -35,7 +35,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 ### P1 — Core pipeline (UK, job-ad signal)
 - [x] P1.1 `ReedService` + `FetchReedJobsJob` + `FetchReedJobDetailJob`
 - [x] P1.2 `AdzunaService` + `FetchAdzunaJobsJob`
-- [ ] P1.3 `IngestJobAdAction` (dedupe, recruiter filter, create/attach Company)
+- [x] P1.3 `IngestJobAdAction` (dedupe, recruiter filter, create/attach Company)
 - [ ] P1.4 `CompaniesHouseService` (search, profile, officers) + jobs
 - [ ] P1.5 `CompanyClassifier` (agency / direct client / recruiter / offshore) from SIC + text
 - [ ] P1.6 `BraveSearchService::findCompanyWebsite()` + job
@@ -107,6 +107,11 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 | D32 | 2026-11-04 | `FetchAdzunaJobsJob` ingests ads directly (no detail job) | Adzuna has no job-detail endpoint; the search result is all we get |
 | D33 | 2026-11-04 | `ExternalApiService` redacts `app_id`/`app_key`/`key`/`token` query values from connection-error messages and does not chain the original exception | Adzuna (and later MillionVerifier) take keys in the URL; cURL errors include it and would land in logs and `failed_jobs` in a public-repo project |
 | D34 | 2026-11-04 | Public repo: https://github.com/sabexel/leadradar (pushed 2026-11-04). Commits are authored with the owner's own email at the owner's choice | Owner confirmed |
+| D35 | 2026-11-04 | Ingest dedupes on the **exact** `CompanyMatcher::normalise()` name (case, punctuation, accents, `&`→`and`, leading "the", trailing ltd/limited/llp/plc/uk… stripped), under a per-name cache lock + transaction. No fuzzy matching at ingest | A wrong fuzzy merge silently mixes two employers' signals; fuzzy similarity (Jaro-Winkler) is used for Companies House matching where candidates are logged for review |
+| D36 | 2026-11-04 | Recruiter ads are skipped **entirely** (no Signal, no Company). `RecruiterDetector` = whole-word name patterns (spec list + executive search, headhunt, personnel, selection/careers/employment ltd, appointments) **or** ad text saying "on behalf of / my / our client is…" (singular "client" only) | docs/05 orders the skip before the Signal upsert; Adzuna ads often hide the agency behind a neutral name but the text gives it away; agencies say "our clients" (plural) |
+| D37 | 2026-11-04 | `AdvanceLeadPipelineAction` is built incrementally: now = finished-status guard + suppression gate; each later step adds its dispatch. Ingest advances **only newly created** companies; a new signal for an existing company just attaches | Avoids pulling P1.12 forward; existing companies are already in/after the pipeline (re-scoring covers new evidence) |
+| D38 | 2026-11-04 | `SuppressionList::matchFor()` matches domain, company number or any of the company's emails (all lowercased). The PipelineEvent records only the suppression `type` + `reason`, never the value | The value may be an email address (personal data) |
+| D39 | 2026-11-04 | `Company::recordEvent(step, outcome, message, context)` is the one way to write a PipelineEvent | Consistent timeline entries from every action |
 
 ## Open questions
 
@@ -127,4 +132,4 @@ Record only **whether** a key is configured — never the value.
 
 ## Known issues
 
-- —
+- `RecruiterDetector` flags any employer with the whole word "people" (spec keyword), e.g. a studio called "Good People Digital". Revisit if real data shows false positives.
