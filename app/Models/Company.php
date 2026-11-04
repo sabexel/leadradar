@@ -40,8 +40,8 @@ use Illuminate\Support\Carbon;
  * @property int|null $contact_email_id
  * @property int|null $careers_email_id
  * @property CompanyType $company_type
- * @property list<array{type: string, detail: string, url?: string|null}>|null $laravel_evidence
- * @property list<array{type: string, detail: string, url?: string|null}>|null $offshore_evidence
+ * @property list<array{type: string, weight?: string, detail: string, url?: string|null}>|null $laravel_evidence
+ * @property list<array{type: string, weight?: string, detail: string, url?: string|null}>|null $offshore_evidence
  * @property LeadStatus $status
  * @property PipelineStep $pipeline_step
  * @property RejectReason|null $reject_reason

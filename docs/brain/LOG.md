@@ -252,3 +252,17 @@
   (no founders → `qualify`). All passing locally; Pint, Larastan, vp check, tsc clean. CI not yet checked.
 - Decisions: D71.
 - Notes / follow-ups: companies now stop at `qualify` until P1.11.
+
+## 2026-11-04 — P1.11 LeadScoringService + QualifyCompanyAction
+- Done: DTO `LeadScore`; local `App\Services\Scoring\LeadScoringService` (docs/06 gates in table order +
+  five-line 0–10 score with per-item breakdown); `QualifyCompanyAction` (score + gates + `qualify_threshold` →
+  qualified / rejected(reason), event, `done`); `qualify` wired into `AdvanceLeadPipelineAction` as the last
+  local step. Company evidence docblock now includes `weight`.
+- Tests: `tests/Feature/Scoring/LeadScoringTest.php` (48): perfect lead = 10.0, every criterion line,
+  Laravel cap, job-board-only ads, timing boundaries 7/8, 14/15, 30/31 days, newest ad wins, fit (types, accounts
+  categories, 2-year boundary), reach (ok/catch_all/other, LinkedIn, Founder 2), inboxes, threshold 9.5 vs 9.6 and
+  the default 6.0 vs 5.5, stored breakdown + qualified_at kept on rescore, one fixture per reject reason (11),
+  crawled vs generated catch_all, Laravel gate without an ad, pipeline step. Three pipeline tests now end at
+  `done`. 447 passing; Pint, Larastan clean.
+- Decisions: D72–D75.
+- Notes / follow-ups: P1.12 adds retry-from-step and the end-to-end pipeline test.

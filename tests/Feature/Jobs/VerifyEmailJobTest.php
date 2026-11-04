@@ -228,8 +228,8 @@ it('moves straight on when there is nothing to verify', function () {
     Http::assertNothingSent();
     Queue::assertNotPushed(VerifyEmailJob::class);
     expect($company->pipelineEvents()->where('step', PipelineStep::VerifyEmails)->exists())->toBeTrue()
-        // no founders → nobody to look up on LinkedIn either → qualify
-        ->and($company->refresh()->pipeline_step)->toBe(PipelineStep::Qualify);
+        // no founders → nobody to look up on LinkedIn → qualify runs → done
+        ->and($company->refresh()->pipeline_step)->toBe(PipelineStep::Done);
 });
 
 it('queues one job per address on the verify queue', function () {

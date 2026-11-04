@@ -87,7 +87,7 @@ it('searches Brave per founder, stores the canonical profile URL with its source
         ->and($jane->linkedin_checked_at)->not->toBeNull()
         ->and($john->linkedin_url)->toBeNull()
         ->and($john->linkedin_checked_at)->not->toBeNull()
-        ->and($company->refresh()->pipeline_step)->toBe(PipelineStep::Qualify)
+        ->and($company->refresh()->pipeline_step)->toBe(PipelineStep::Done)
         ->and($company->pipelineEvents()->where('step', PipelineStep::FindLinkedIn)->sole()->context)->toEqual(['searched' => 2, 'found' => 1]);
 });
 
@@ -100,7 +100,7 @@ it('skips founders that already have a URL or were searched within 30 days', fun
     runLinkedInJobs($company);
 
     Http::assertNothingSent();
-    expect($company->refresh()->pipeline_step)->toBe(PipelineStep::Qualify);
+    expect($company->refresh()->pipeline_step)->toBe(PipelineStep::Done);
 });
 
 it('searches again after 30 days', function () {

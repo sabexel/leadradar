@@ -8,14 +8,14 @@
 ## Current status
 
 - **Phase:** P1 — in progress
-- **Last completed task:** P1.10 LinkedIn URL lookup via Brave
-- **Working on:** P1.11
+- **Last completed task:** P1.11 Lead scoring + qualification
+- **Working on:** P1.12
 - **Blocked by:** — (building with faked APIs; owner is registering API keys)
 
 ## Next step
 
-1. **P1.11** — `LeadScoringService` + `QualifyCompanyAction` exactly per docs/06 (gates + 0–10 score + breakdown, threshold `qualify_threshold`); wire `qualify` (local) → `done` with `qualified`/`rejected(reason)`. Companies now stop at `qualify`.
-2. Owner: put API keys in `.env`; one live call each to confirm Reed JSON keys (D23), Adzuna limits (D31), CH search, Brave query + quota, and MillionVerifier result values/error texts with `API_KEY_FOR_TEST` (D67).
+1. **P1.12** — finish `AdvanceLeadPipelineAction` as the complete state machine: every step is now wired (registry → classify → website → crawl → candidates → verify → LinkedIn → qualify → done); add **retry-from-step** (an action that resets an `error` company to `enriching` at a given step and advances it) and make sure every transition writes a PipelineEvent. Acceptance: one feature test where a fake company goes `discovered → qualified` with ALL HTTP faked (Reed/CH/Brave/site/MillionVerifier), and one that fails at each gate.
+2. Owner: put API keys in `.env`; one live call each to confirm Reed JSON keys (D23), Adzuna limits (D31), CH search, Brave query + quota, MillionVerifier result values (D67).
 3. Owner: publish https://webwayout.co.uk/bot (crawler UA points there, docs/09).
 4. Confirm the Hostinger plan offers PHP 8.4+ (D30).
 
@@ -44,7 +44,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 - [x] P1.8 `EmailPatternService` (local) — candidate founder emails
 - [x] P1.9 `MillionVerifierService` + `VerifyEmailJob` (stop at first `ok`, honour credit cap)
 - [x] P1.10 `BraveSearchService::findLinkedInProfile()` + job
-- [ ] P1.11 `LeadScoringService` + gates (sync) → status `qualified` / `rejected`
+- [x] P1.11 `LeadScoringService` + gates (sync) → status `qualified` / `rejected`
 - [ ] P1.12 `AdvanceLeadPipelineAction` state machine wiring all steps
 - [ ] P1.13 Scheduler: daily discovery run, stops at daily qualified target
 - [ ] P1.14 Suppression list + CSV import of already-contacted companies
@@ -145,6 +145,10 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 | D69 | 2026-11-04 | At the end of `verify_emails` each founder's `email_id` = best address: `ok` > `catch_all` > `unknown` > unverified **crawled**; ties → crawled first, then try-order. Invalid, disposable, error and unverified guesses are never picked; no candidate → `email_id = null` | Feeds the score (Founder 1 `ok` +1.5, `catch_all` +0.5) and the "contactable" gate |
 | D70 | 2026-11-04 | `VerifyEmailJob(companyId, emailAddressId)` — one address, one credit; unique per address; a re-run finds the address freshly verified and spends nothing | docs/05 one call per job + idempotency |
 | D71 | 2026-11-04 | LinkedIn: `findLinkedInProfile(first, last, company)` (spec had fullName) with query `site:linkedin.com/in "{first last}" "{trading name minus Ltd/Limited/LLP/PLC}"`. Accept only `*.linkedin.com/in/{slug}`; names matched as whole words only in the title part before the first spaced separator (company names can contain the surname). `linkedin_url` = canonical `https://www.linkedin.com/in/{slug}`, `linkedin_source_url` = raw result URL. New column `people.linkedin_checked_at`: no repeat query within 30 days (docs/09). Never requests linkedin.com | docs/04 + CLAUDE.md hard rule; a test asserts no request to linkedin.com |
+| D72 | 2026-11-04 | "Accounts micro-entity or small" (+0.5 fit) = last-accounts type in `micro-entity`, `small`, `total-exemption-small`, `total-exemption-full`, `unaudited-abridged`, `audited-abridged` | Companies House reports small-company accounts under several type names; `full`/`medium`/`group` do not count |
+| D73 | 2026-11-04 | Scoring inputs: "Laravel job ad" = a Reed/Adzuna signal linked to the company whose title/description says "Laravel"; "Laravel on services/case studies/careers" = a `laravel_mention` with weight `strong` (D57); "site runs Laravel" = `runs_laravel` / `livewire` / `inertia`. The Laravel gate = such an ad or any strong evidence | docs/06 table mapped onto the stored evidence |
+| D74 | 2026-11-04 | Timing = whole days on the London calendar between the newest Laravel ad's `posted_at` and today (≤ 7 → 2.0, ≤ 14 → 1.5, ≤ 30 → 1.0). Founder 1 `catch_all` scores +0.5 whatever its origin (only the *gate* needs it crawled). "Founder 2 identified with any email" = Founder 2 has an `email_id` (any status) | docs/06 wording applied literally |
+| D75 | 2026-11-04 | `QualifyCompanyAction`: gates in docs/06 table order (first failure is the reject reason); non-UK companies fail `not_on_registry` until P4.2; the score + breakdown (incl. `failed_gate`, timing `days_old`) is always stored; `qualified_at` is kept on a rescore; step → `done` | Rescore must not move a lead into "qualified today" again |
 
 ## Open questions
 

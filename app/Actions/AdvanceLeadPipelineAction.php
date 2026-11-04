@@ -44,6 +44,7 @@ final class AdvanceLeadPipelineAction
         private readonly VerificationPlanner $verificationPlanner,
         private readonly ApplyVerificationResultAction $verification,
         private readonly ApplyLinkedInResultAction $linkedIn,
+        private readonly QualifyCompanyAction $qualify,
     ) {}
 
     public function run(Company $company): void
@@ -154,6 +155,11 @@ final class AdvanceLeadPipelineAction
 
                 return true;
 
+            case PipelineStep::Qualify:
+                $this->qualify->run($company); // qualified or rejected → the loop stops (finished)
+
+                return true;
+
             default:
                 return false;
         }
@@ -172,7 +178,7 @@ final class AdvanceLeadPipelineAction
             PipelineStep::Crawl => ($url = $this->crawlPlanner->next($company)) === null ? null : new CrawlCompanyWebsiteJob($company->id, $url),
             PipelineStep::VerifyEmails => ($email = $this->verificationPlanner->next($company)) === null ? null : new VerifyEmailJob($company->id, $email->id),
             PipelineStep::FindLinkedIn => ($person = $this->linkedIn->nextPerson($company)) === null ? null : new FindLinkedInProfileJob($company->id, $person->id),
-            default => null, // `qualify` is wired in with P1.11
+            default => null, // every other step is local
         };
     }
 }
