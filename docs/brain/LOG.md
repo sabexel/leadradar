@@ -281,3 +281,15 @@
   Larastan, vp check, tsc clean.
 - Decisions: D76, D77. Known issue (robots 5xx) updated.
 - Notes / follow-ups: P1.13 adds the scheduler/commands that start runs.
+
+## 2026-11-04 — P1.13 Scheduler + leadradar:discover / close-runs / rescore
+- Done: `StartDiscoveryRunAction` + `leadradar:discover [--manual]`; `CloseScrapeRunsAction` +
+  `leadradar:close-runs`; `leadradar:rescore` (local, qualified + near misses); `routes/console.php` schedule per
+  docs/08 (starter `inspire` removed). Commands use Laravel 13 `#[Signature]` / `#[Description]` attributes.
+- Tests: `tests/Feature/Console/SchedulerCommandsTest.php` (11): target reached → run stopped and nothing
+  dispatched; yesterday's leads don't count; page 1 per keyword on both boards tied to the run; manual trigger;
+  missing key skips a board / nothing to search fails the run; non-UK countries search nothing; no second
+  concurrent run; close-runs counts + waits for queued work + 20 h timeout; rescore scope + near miss promoted +
+  qualified_at kept; schedule expressions/timezone/options. 475 passing; Pint, Larastan, vp check, tsc clean.
+- Decisions: D78–D81.
+- Notes / follow-ups: on Hostinger this needs the single cron line from docs/08 (`schedule:run` every minute).

@@ -8,13 +8,13 @@
 ## Current status
 
 - **Phase:** P1 — in progress
-- **Last completed task:** P1.12 Complete pipeline state machine + retry step
-- **Working on:** P1.13
+- **Last completed task:** P1.13 Scheduler + discover / close-runs / rescore commands
+- **Working on:** P1.14
 - **Blocked by:** — (building with faked APIs; owner is registering API keys)
 
 ## Next step
 
-1. **P1.13** — commands `leadradar:discover` (create `ScrapeRun`; stop with `stopped_target_reached` when today's qualified ≥ `daily_qualified_target`; else dispatch `FetchReedJobsJob` + `FetchAdzunaJobsJob` page 1 per `search.keywords`), `leadradar:close-runs` (finalise counts when the run's queue work is done), `leadradar:rescore` (re-run `QualifyCompanyAction` for non-rejected companies); schedule per docs/08 in `routes/console.php` (queue:work every minute, discover 06:10 London, close-runs every 15 min, prune). Acceptance: when today's qualified ≥ target, discover exits without dispatching.
+1. **P1.14** — suppression: `SuppressionList` checks already run in the pipeline before every paid step (domain, company number, emails); add `ImportContactedCsvAction` (owner's outreach-sheet export → `suppressions` with reason `already_contacted`: domains from website/email columns, emails, company numbers; lowercase, dedupe, report counts) + an artisan command `leadradar:import-contacted {file}` for now (the upload UI is P2.7). Acceptance: importing the owner's sheet export suppresses every domain in it. Use an invented CSV fixture only — never the real sheet.
 2. Owner: put API keys in `.env`; one live call each to confirm Reed JSON keys (D23), Adzuna limits (D31), CH search, Brave query + quota, MillionVerifier result values (D67).
 3. Owner: publish https://webwayout.co.uk/bot (crawler UA points there, docs/09).
 4. Confirm the Hostinger plan offers PHP 8.4+ (D30).
@@ -46,7 +46,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 - [x] P1.10 `BraveSearchService::findLinkedInProfile()` + job
 - [x] P1.11 `LeadScoringService` + gates (sync) → status `qualified` / `rejected`
 - [x] P1.12 `AdvanceLeadPipelineAction` state machine wiring all steps
-- [ ] P1.13 Scheduler: daily discovery run, stops at daily qualified target
+- [x] P1.13 Scheduler: daily discovery run, stops at daily qualified target
 - [ ] P1.14 Suppression list + CSV import of already-contacted companies
 
 ### P2 — Dashboard
@@ -151,6 +151,10 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 | D75 | 2026-11-04 | `QualifyCompanyAction`: gates in docs/06 table order (first failure is the reject reason); non-UK companies fail `not_on_registry` until P4.2; the score + breakdown (incl. `failed_gate`, timing `days_old`) is always stored; `qualified_at` is kept on a rescore; step → `done` | Rescore must not move a lead into "qualified today" again |
 | D76 | 2026-11-04 | `RetryPipelineStepAction`: only `error` or `rejected` companies (never qualified/suppressed); default step = where it stopped (`done` → `qualify`); resets what the step remembers — crawl: delete crawled pages + forget cached robots.txt; find_linkedin: clear `linkedin_checked_at` for founders without a URL; find_website: clear website/domain — then status `enriching`, a "Retry requested" event, and advance | docs/05 "Retry step"; also the cure for the robots-5xx known issue |
 | D77 | 2026-11-04 | A new company's first timeline entry is "Discovered from {source} ad "{title}"" (step `registry_search`), written by `IngestJobAdAction` | Every lead's timeline starts with why we found it |
+| D78 | 2026-11-04 | `StartDiscoveryRunAction` (used by `leadradar:discover [--manual]`): no new run while one is `running`; target reached → run `stopped_target_reached`, nothing queued; otherwise page 1 of Reed + Adzuna per `search.keywords` when `GB` is in `search.countries`; a board whose key is missing is skipped with a warning; nothing to search → run `failed` | docs/05 discovery steps; safe to run by hand or from the dashboard later |
+| D79 | 2026-11-04 | `leadradar:close-runs` finishes a running run when the `sources`/`registry`/`web`/`verify` queues are all empty, or after 20 hours (jobs released until tomorrow by a cap would otherwise keep it open). `qualified_count` = leads with `qualified_at` ≥ run start; `rejected_count` = rejected leads created since the run started | Enrichment jobs don't carry a run id, so counts are by time window (good enough with one run per day) |
+| D80 | 2026-11-04 | `leadradar:rescore` re-runs `QualifyCompanyAction` for finished (`done`) leads that are qualified **or** near misses (`below_threshold`); hard-gate rejections and unfinished leads are left alone; no jobs | docs/05 said "non-rejected"; near misses must be included or lowering the threshold could never promote them |
+| D81 | 2026-11-04 | `routes/console.php` = exactly the docs/08 schedule (worker every minute with `withoutOverlapping(2)` + `runInBackground`, discover 06:10 London, close-runs every 15 min, prune failed jobs after 168 h, `model:prune` daily). The starter `inspire` command was removed. The worker's `--tries=3` does not override our jobs' `retryUntil()` (D25) | docs/08 |
 
 ## Open questions
 
