@@ -8,11 +8,13 @@ use App\Enums\LeadStatus;
 use App\Enums\PipelineOutcome;
 use App\Enums\PipelineStep;
 use App\Enums\RejectReason;
+use App\Jobs\Enrichment\CrawlCompanyWebsiteJob;
 use App\Jobs\Enrichment\FetchCompanyOfficersJob;
 use App\Jobs\Enrichment\FetchCompanyProfileJob;
 use App\Jobs\Enrichment\FindCompanyWebsiteJob;
 use App\Jobs\Enrichment\SearchCompaniesHouseJob;
 use App\Models\Company;
+use App\Services\Crawler\CrawlPlanner;
 use App\Services\Support\SuppressionList;
 
 /**
@@ -33,6 +35,8 @@ final class AdvanceLeadPipelineAction
         private readonly SuppressionList $suppressions,
         private readonly ClassifyCompanyAction $classify,
         private readonly ApplyWebsiteResultAction $websites,
+        private readonly ApplyCrawlResultAction $crawl,
+        private readonly CrawlPlanner $crawlPlanner,
     ) {}
 
     public function run(Company $company): void
@@ -111,6 +115,15 @@ final class AdvanceLeadPipelineAction
 
                 return true;
 
+            case PipelineStep::Crawl:
+                if ($this->crawlPlanner->next($company) !== null) {
+                    return false; // more pages to fetch
+                }
+
+                $this->crawl->finish($company);
+
+                return true;
+
             default:
                 return false;
         }
@@ -126,7 +139,8 @@ final class AdvanceLeadPipelineAction
             PipelineStep::RegistryProfile => $registry ? new FetchCompanyProfileJob($company->id) : null,
             PipelineStep::RegistryOfficers => $registry ? new FetchCompanyOfficersJob($company->id) : null,
             PipelineStep::FindWebsite => new FindCompanyWebsiteJob($company->id),
-            default => null, // later steps are wired in as they are built (P1.7+)
+            PipelineStep::Crawl => ($url = $this->crawlPlanner->next($company)) === null ? null : new CrawlCompanyWebsiteJob($company->id, $url),
+            default => null, // later steps are wired in as they are built (P1.8+)
         };
     }
 }

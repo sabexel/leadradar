@@ -1,0 +1,7 @@
+# Example robots.txt
+User-agent: *
+Disallow: /admin
+Disallow: /*.json$
+Allow: /admin/public
+
+Sitemap: https://www.example-digital.test/sitemap.xml

@@ -13,7 +13,8 @@ final readonly class ClassificationInput
      * @param  list<string>  $sicCodes
      * @param  list<string>  $adTexts  job-ad titles + descriptions (what the company says when hiring)
      * @param  list<string|null>  $officerCountries  country_of_residence of active founders
-     * @param  list<string>  $siteTexts  crawled page text (empty until P1.7)
+     * @param  list<string>  $siteTexts  website text, or the agency terms stored per crawled page
+     * @param  list<DetectedSignal>  $siteOffshoreSignals  offshore signals already detected on crawled pages
      */
     public function __construct(
         public string $name,
@@ -21,6 +22,7 @@ final readonly class ClassificationInput
         public array $adTexts = [],
         public array $officerCountries = [],
         public array $siteTexts = [],
+        public array $siteOffshoreSignals = [],
     ) {}
 
     public function allText(): string

@@ -8,15 +8,16 @@
 ## Current status
 
 - **Phase:** P1 — in progress
-- **Last completed task:** P1.6 Brave website lookup
-- **Working on:** P1.7
+- **Last completed task:** P1.7 Website crawler (robots, pages, emails, Laravel + offshore signals)
+- **Working on:** P1.8
 - **Blocked by:** — (building with faked APIs; owner is registering API keys)
 
 ## Next step
 
-1. **P1.7** — crawler: `RobotsTxtGuard` (cached 24 h, `Crawl-delay`), `WebsiteCrawlerService::fetchPage()` (UA from `services.crawler.user_agent`, 10 s timeout, 2 MB cap, same-domain only, ≥ 2 s per domain via cache lock / `WithoutOverlapping("crawl:{domain}")`), local `EmailExtractor`, `LaravelSignalDetector`, `OffshoreSignalDetector` page part (reuse `detectInText`), `CrawlCompanyWebsiteJob` (one page per job, queues the next candidate up to `cap.crawler.pages_per_company`), `ApplyCrawlResultAction` (store extracted facts only, never HTML), then re-run `ClassifyCompanyAction` with page text (offshore → rejected). Wire `crawl` into `AdvanceLeadPipelineAction`. Companies now arrive at `crawl` with `website` + `domain` set.
+1. **P1.8** — `EmailPatternService::candidates(Person, domain)` (local; order first@, first.last@, firstlast@, f.last@, flast@, first_last@, last@; skip when a crawled `person` email exists; a pattern already confirmed for another person at the company goes first) + `BuildEmailCandidatesAction` (creates `generated` EmailAddress rows for Founder 1/2, origin + no source_url). Wire `build_email_candidates` (local) → `verify_emails` into `AdvanceLeadPipelineAction`. Companies now arrive at `build_email_candidates` after the crawl.
 2. Owner: put API keys in `.env`; verify Reed JSON keys (D23), Adzuna limits (D31), one CH search, one Brave query + the Brave free-tier quota (open question).
-3. Confirm the Hostinger plan offers PHP 8.4+ (D30).
+3. Owner: publish a short page at https://webwayout.co.uk/bot (what LeadRadarBot is, how to opt out) — the crawler's User-Agent points there (docs/09).
+4. Confirm the Hostinger plan offers PHP 8.4+ (D30).
 
 ---
 
@@ -39,7 +40,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 - [x] P1.4 `CompaniesHouseService` (search, profile, officers) + jobs
 - [x] P1.5 `CompanyClassifier` (agency / direct client / recruiter / offshore) from SIC + text
 - [x] P1.6 `BraveSearchService::findCompanyWebsite()` + job
-- [ ] P1.7 `WebsiteCrawlerService` (pages, emails, Laravel signals, offshore signals) + job
+- [x] P1.7 `WebsiteCrawlerService` (pages, emails, Laravel signals, offshore signals) + job
 - [ ] P1.8 `EmailPatternService` (local) — candidate founder emails
 - [ ] P1.9 `MillionVerifierService` + `VerifyEmailJob` (stop at first `ok`, honour credit cap)
 - [ ] P1.10 `BraveSearchService::findLinkedInProfile()` + job
@@ -128,6 +129,13 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 | D53 | 2026-11-04 | Local `WebsiteSelector`: blocklist in `config/services.php → brave.blocked_domains` (registries, data directories, listings, agency directories, job boards, socials, code hosts; subdomains blocked; any `*.gov.uk` blocked). Significant tokens = normalised name words ≥ 3 letters minus a generic-word list (digital, studio, web, labs, software…), falling back to all words. First non-blocked result whose domain/title/snippet contains a token as a whole word (or the token inside the dash/dot-less domain) wins. `website` = origin as found (`https://www.example.co.uk`), `domain` = bare host | docs/04 rule made concrete and testable without the network; blocklist editable without code changes |
 | D54 | 2026-11-04 | A found domain that already belongs to another company → `rejected(no_website)` with message "already belongs to another lead" + the owner's id in the event | `companies.domain` is unique and one website = one set of people to email |
 | D55 | 2026-11-04 | `find_website` is a local step when `website` is already set (normalises it, sets `domain`, → `crawl`); the Brave job runs only when it is unknown | docs/05 "skip if website known"; saves paid queries for manual imports |
+| D56 | 2026-11-04 | One request per crawl job: the first job for a domain fetches `robots.txt` (cached 24 h) and releases itself; later jobs fetch one page. robots.txt: 2xx → parsed (group naming LeadRadarBot preferred over `*`; longest match wins, Allow wins ties, `*` and `$` supported, `Crawl-delay` read); 4xx → allow all; 5xx/unreachable → disallow all (RFC 9309) | Keeps "one external call per job" while still checking robots before every page |
+| D57 | 2026-11-04 | "Laravel" text weight: **strong** on services/careers pages or URLs containing case-stud/work/portfolio/projects/laravel (docs/04); **medium** on other pages (home, about…); **weak** when listed with ≥ 2 other frameworks | docs/04 only defined strong/weak; a home-page mention is real but less specific |
+| D58 | 2026-11-04 | Politeness: per-domain "last request" clock in cache; gap = max(2 s, Crawl-delay); an early job releases itself. Concurrency: `WithoutOverlapping("crawl:{companyId}")` (one company ↔ one domain, D54) | docs/05 §6 + docs/09 |
+| D59 | 2026-11-04 | No page HTML or text is stored. `crawled_pages.extracted` = title, emails (address + kind), candidate links, Laravel/offshore signals, matched agency terms, skip reason. The post-crawl re-classification uses the stored agency terms + offshore signals | docs/03/09 data minimisation; the classifier still gets what it needs |
+| D60 | 2026-11-04 | Page order: home → contact → team → about → careers → services (shorter URL first within a type); query strings/fragments dropped; files, socials and other domains skipped; `sitemap.xml` (its `<loc>`s, filtered the same way) once link candidates run out and the cap isn't reached. `cap.crawler.pages_per_company` counts fetched pages, not the sitemap | docs/04 discovery order, made deterministic |
+| D61 | 2026-11-04 | Page outcomes are data: HTTP errors, off-domain redirects, non-HTML responses and unreachable inner pages are stored as skipped rows with a reason and the crawl continues; an unreachable **home** page throws (retry, then `error`). Body capped at 2 MB by truncation; max 3 redirects. Crawler usage is logged in `api_usages` with cost 0 (no cap) | One broken page must not kill a lead; a dead site should surface as an error to retry |
+| D62 | 2026-11-04 | Emails kept: company domain or its subdomains only; no-reply/privacy/placeholder addresses dropped. Contact/careers local-part lists extended (hi, mail, sales, support… / job, talent, joinus…). An address matching an active person (first, first.last, firstlast, f.last, flast, first_last, first-last, last) becomes kind `person` linked to them; the first contact/careers address found fills `contact_email_id` / `careers_email_id` | docs/04 rules; provenance via `origin = crawled` + `source_url` |
 
 ## Open questions
 
@@ -150,3 +158,4 @@ Record only **whether** a key is configured — never the value.
 
 - `RecruiterDetector` flags any employer with the whole word "people" (spec keyword), e.g. a studio called "Good People Digital". Revisit if real data shows false positives.
 - `CompanyClassifier` treats "studio" (also in a company name) as agency language, so a product company called "… Studio Ltd" with an agency SIC is classified `agency` until crawl text says otherwise (P1.7).
+- A robots.txt answering 5xx means "disallow all" (RFC 9309), so that lead's site is skipped for good (no later re-crawl yet). Revisit with a re-crawl action on the dashboard (P2.3).

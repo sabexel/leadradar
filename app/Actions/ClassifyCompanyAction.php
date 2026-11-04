@@ -9,7 +9,6 @@ use App\DTOs\Classification\ClassificationInput;
 use App\DTOs\Classification\DetectedSignal;
 use App\Enums\CompanyType;
 use App\Enums\PipelineOutcome;
-use App\Enums\PipelineStep;
 use App\Enums\RejectReason;
 use App\Models\Company;
 use App\Models\Person;
@@ -27,8 +26,9 @@ final class ClassifyCompanyAction
 
     /**
      * @param  list<string>  $siteTexts
+     * @param  list<DetectedSignal>  $siteOffshoreSignals
      */
-    public function run(Company $company, array $siteTexts = []): Classification
+    public function run(Company $company, array $siteTexts = [], array $siteOffshoreSignals = []): Classification
     {
         $result = $this->classifier->classify(new ClassificationInput(
             name: $company->legal_name ?? $company->name,
@@ -40,6 +40,7 @@ final class ClassifyCompanyAction
                 ->map(fn (Person $p): ?string => $p->country_of_residence)
                 ->all()),
             siteTexts: $siteTexts,
+            siteOffshoreSignals: $siteOffshoreSignals,
         ));
 
         $company->update([
@@ -54,7 +55,7 @@ final class ClassifyCompanyAction
         match ($result->type) {
             CompanyType::Recruiter => $company->reject(RejectReason::Recruiter, 'Recruitment agency', $context),
             CompanyType::Offshore => $company->reject(RejectReason::Offshore, 'Offshore development shop', $context),
-            default => $company->recordEvent(PipelineStep::Classify, PipelineOutcome::Ok, "Classified as {$result->type->value}", $context),
+            default => $company->recordEvent($company->pipeline_step, PipelineOutcome::Ok, "Classified as {$result->type->value}", $context),
         };
 
         return $result;

@@ -194,3 +194,22 @@
   search). 279 passing; Pint, Larastan, vp check, tsc clean.
 - Decisions: D52–D55. Brave open question updated.
 - Notes / follow-ups: companies now stop at `crawl` until P1.7.
+
+## 2026-11-04 — P1.7 WebsiteCrawlerService + local analysers + CrawlCompanyWebsiteJob
+- Done: DTOs `CrawlResult`, `ExtractedEmail`; `RobotsRules` + `RobotsTxtGuard` (parse, cache, per-domain
+  clock); local `EmailExtractor`, `LaravelSignalDetector`, `CrawlPlanner` (page types, candidate links, next URL,
+  sitemap fallback, cap); `WebsiteCrawlerService` (`fetchRobotsTxt`, `fetchPage`; UA from config, no HTML kept);
+  `ApplyCrawlResultAction` (`apply` per page, `finish` = crawl event + second classification → 
+  `build_email_candidates`); `CrawlCompanyWebsiteJob` (`web` queue, `WithoutOverlapping`); `crawl` wired into
+  `AdvanceLeadPipelineAction`. `CompanyClassifier::agencyTerms()`; `ClassificationInput::siteOffshoreSignals`;
+  `ExternalApiService::get(allowErrors)`.
+- Tests: `tests/Unit/Crawler/RobotsTxtGuardTest.php`, `tests/Unit/Crawler/PageAnalysersTest.php` (mailto + plain +
+  obfuscated emails, off-domain ignored, script emails ignored, no-reply dropped, Laravel partner/cookie/Livewire/
+  Inertia/framework list, candidate links, page types) and `tests/Feature/Jobs/CrawlCompanyWebsiteJobTest.php`
+  (robots first, page order, UA, page cap, robots disallow-all skip, our-bot rules + Crawl-delay, politeness
+  release, emails → founders + inboxes, Laravel evidence, no HTML stored, offshore rejection after crawl, sitemap
+  fallback, unreachable inner page vs home, direct-client re-classification). HTML/robots fixtures in
+  `tests/Fixtures/html`, `tests/Fixtures/robots`. 327 passing; Pint, Larastan, vp check, tsc clean.
+- Decisions: D56–D62. Known issue added (robots 5xx).
+- Notes / follow-ups: owner to publish https://webwayout.co.uk/bot. Companies now stop at
+  `build_email_candidates` until P1.8.

@@ -33,12 +33,13 @@ abstract class ExternalApiService
     /**
      * @param  array<string, mixed>  $query
      * @param  bool  $allowNotFound  return 404 responses to the caller instead of throwing
+     * @param  bool  $allowErrors  return every 4xx/5xx (except 429) to the caller — e.g. a crawled page's status is data
      *
      * @throws RateLimitedException
      * @throws DailyCapReachedException
      * @throws ExternalServiceException
      */
-    protected function get(string $path, array $query, string $endpoint, float $cost = 1.0, bool $allowNotFound = false): Response
+    protected function get(string $path, array $query, string $endpoint, float $cost = 1.0, bool $allowNotFound = false, bool $allowErrors = false): Response
     {
         $this->limiter->ensureAvailable($this->service(), $cost);
 
@@ -60,7 +61,7 @@ abstract class ExternalApiService
             throw new RateLimitedException($this->service(), $this->retryAfter($response), 'provider returned 429');
         }
 
-        if ($allowNotFound && $response->notFound()) {
+        if (($allowNotFound && $response->notFound()) || $allowErrors) {
             return $response;
         }
 

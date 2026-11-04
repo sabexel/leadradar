@@ -77,11 +77,30 @@ final class CompanyClassifier
     }
 
     /**
+     * Agency phrases present in a text (stored per crawled page instead of the text itself, D59).
+     *
+     * @return list<string>
+     */
+    public function agencyTerms(string $text): array
+    {
+        $text = Str::lower($text);
+        $terms = [];
+
+        foreach ([self::EXPLICIT_AGENCY, ...self::AGENCY_LANGUAGE] as $pattern) {
+            if (preg_match_all('/\b'.$pattern.'\b/u', $text, $m) > 0) {
+                array_push($terms, ...$m[0]);
+            }
+        }
+
+        return array_values(array_unique($terms));
+    }
+
+    /**
      * @return list<DetectedSignal>
      */
     private function offshoreSignals(ClassificationInput $input): array
     {
-        $text = [];
+        $text = $input->siteOffshoreSignals;
 
         foreach ([...$input->adTexts, ...$input->siteTexts] as $chunk) {
             array_push($text, ...$this->offshore->detectInText($chunk));
