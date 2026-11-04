@@ -213,3 +213,17 @@
 - Decisions: D56–D62. Known issue added (robots 5xx).
 - Notes / follow-ups: owner to publish https://webwayout.co.uk/bot. Companies now stop at
   `build_email_candidates` until P1.8.
+
+## 2026-11-04 — P1.8 EmailPatternService + BuildFounderEmailCandidatesAction
+- Done: local `App\Services\Email\EmailPatternService` (`candidates`, `patternOf`, `PATTERNS`);
+  `BuildFounderEmailCandidatesAction` (learns the company convention, generates rows for Founder 1/2, skips
+  founders with a crawled/verified address, records the event, → `verify_emails`); `build_email_candidates`
+  wired into `AdvanceLeadPipelineAction` as a local step.
+- Tests: `tests/Unit/Email/EmailPatternServiceTest.php` (pattern order, confirmed pattern first, unknown
+  pattern ignored, name normalisation, preferred name, missing names, pattern detection) and
+  `tests/Feature/Actions/BuildFounderEmailCandidatesActionTest.php` (14 rows for two founders in try-order,
+  convention from crawled and from verified addresses, skip when found on site, only Founder 1/2, idempotent,
+  pipeline step, suppressed generated address). Crawl tests now end at `verify_emails`. 350 passing; Pint,
+  Larastan, vp check clean.
+- Decisions: D63–D66.
+- Notes / follow-ups: companies now stop at `verify_emails` until P1.9.

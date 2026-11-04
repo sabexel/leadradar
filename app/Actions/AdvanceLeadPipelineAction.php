@@ -37,6 +37,7 @@ final class AdvanceLeadPipelineAction
         private readonly ApplyWebsiteResultAction $websites,
         private readonly ApplyCrawlResultAction $crawl,
         private readonly CrawlPlanner $crawlPlanner,
+        private readonly BuildFounderEmailCandidatesAction $emailCandidates,
     ) {}
 
     public function run(Company $company): void
@@ -124,6 +125,11 @@ final class AdvanceLeadPipelineAction
 
                 return true;
 
+            case PipelineStep::BuildEmailCandidates:
+                $this->emailCandidates->run($company);
+
+                return true;
+
             default:
                 return false;
         }
@@ -140,7 +146,7 @@ final class AdvanceLeadPipelineAction
             PipelineStep::RegistryOfficers => $registry ? new FetchCompanyOfficersJob($company->id) : null,
             PipelineStep::FindWebsite => new FindCompanyWebsiteJob($company->id),
             PipelineStep::Crawl => ($url = $this->crawlPlanner->next($company)) === null ? null : new CrawlCompanyWebsiteJob($company->id, $url),
-            default => null, // later steps are wired in as they are built (P1.8+)
+            default => null, // later steps are wired in as they are built (P1.9+)
         };
     }
 }

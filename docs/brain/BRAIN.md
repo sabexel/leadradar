@@ -8,15 +8,15 @@
 ## Current status
 
 - **Phase:** P1 — in progress
-- **Last completed task:** P1.7 Website crawler (robots, pages, emails, Laravel + offshore signals)
-- **Working on:** P1.8
+- **Last completed task:** P1.8 Founder email patterns
+- **Working on:** P1.9
 - **Blocked by:** — (building with faked APIs; owner is registering API keys)
 
 ## Next step
 
-1. **P1.8** — `EmailPatternService::candidates(Person, domain)` (local; order first@, first.last@, firstlast@, f.last@, flast@, first_last@, last@; skip when a crawled `person` email exists; a pattern already confirmed for another person at the company goes first) + `BuildEmailCandidatesAction` (creates `generated` EmailAddress rows for Founder 1/2, origin + no source_url). Wire `build_email_candidates` (local) → `verify_emails` into `AdvanceLeadPipelineAction`. Companies now arrive at `build_email_candidates` after the crawl.
-2. Owner: put API keys in `.env`; verify Reed JSON keys (D23), Adzuna limits (D31), one CH search, one Brave query + the Brave free-tier quota (open question).
-3. Owner: publish a short page at https://webwayout.co.uk/bot (what LeadRadarBot is, how to opt out) — the crawler's User-Agent points there (docs/09).
+1. **P1.9** — `MillionVerifierService::verify(email)` → `EmailVerificationResult` + `VerifyEmailJob` (`verify` queue, `RateLimited('millionverifier')`, daily cap `cap.millionverifier.per_day`, 1 credit per call; cap reached → released, not failed). Order: crawled person emails first, then each founder's generated candidates by id (= try-order, D65); stop for a person at the first `ok` (set `people.email_id`); also verify the contact + careers inboxes; never re-verify within 90 days (`services.millionverifier.reverify_after_days`). Wire `verify_emails` → `find_linkedin`. Check MillionVerifier API docs (endpoint, result values) first.
+2. Owner: put API keys in `.env`; verify Reed JSON keys (D23), Adzuna limits (D31), one CH search, one Brave query + Brave quota (open question).
+3. Owner: publish https://webwayout.co.uk/bot (crawler UA points there, docs/09).
 4. Confirm the Hostinger plan offers PHP 8.4+ (D30).
 
 ---
@@ -41,7 +41,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 - [x] P1.5 `CompanyClassifier` (agency / direct client / recruiter / offshore) from SIC + text
 - [x] P1.6 `BraveSearchService::findCompanyWebsite()` + job
 - [x] P1.7 `WebsiteCrawlerService` (pages, emails, Laravel signals, offshore signals) + job
-- [ ] P1.8 `EmailPatternService` (local) — candidate founder emails
+- [x] P1.8 `EmailPatternService` (local) — candidate founder emails
 - [ ] P1.9 `MillionVerifierService` + `VerifyEmailJob` (stop at first `ok`, honour credit cap)
 - [ ] P1.10 `BraveSearchService::findLinkedInProfile()` + job
 - [ ] P1.11 `LeadScoringService` + gates (sync) → status `qualified` / `rejected`
@@ -136,6 +136,10 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 | D60 | 2026-11-04 | Page order: home → contact → team → about → careers → services (shorter URL first within a type); query strings/fragments dropped; files, socials and other domains skipped; `sitemap.xml` (its `<loc>`s, filtered the same way) once link candidates run out and the cap isn't reached. `cap.crawler.pages_per_company` counts fetched pages, not the sitemap | docs/04 discovery order, made deterministic |
 | D61 | 2026-11-04 | Page outcomes are data: HTTP errors, off-domain redirects, non-HTML responses and unreachable inner pages are stored as skipped rows with a reason and the crawl continues; an unreachable **home** page throws (retry, then `error`). Body capped at 2 MB by truncation; max 3 redirects. Crawler usage is logged in `api_usages` with cost 0 (no cap) | One broken page must not kill a lead; a dead site should surface as an error to retry |
 | D62 | 2026-11-04 | Emails kept: company domain or its subdomains only; no-reply/privacy/placeholder addresses dropped. Contact/careers local-part lists extended (hi, mail, sales, support… / job, talent, joinus…). An address matching an active person (first, first.last, firstlast, f.last, flast, first_last, first-last, last) becomes kind `person` linked to them; the first contact/careers address found fills `contact_email_id` / `careers_email_id` | docs/04 rules; provenance via `origin = crawled` + `source_url` |
+| D63 | 2026-11-04 | The action is `BuildFounderEmailCandidatesAction` (docs/02, docs/10); earlier brain notes saying `BuildEmailCandidatesAction` meant the same thing | Spec name wins |
+| D64 | 2026-11-04 | `EmailPatternService`: names = (`preferred_name` ?: `first_name`) + `last_name`, reduced to lowercase ASCII letters ("José O'Example-Smith" → `jose` / `oexamplesmith`). The company's convention = the most common pattern among its person-linked addresses that were crawled or verified `ok`; it goes first, the rest keep docs/04 order | docs/04 rules; a crawled address is as good as a verified one for learning the convention |
+| D65 | 2026-11-04 | Candidates only for Founder 1/2 (active, positions 1–2); a founder with any crawled or `ok` address gets none. Rows are `kind = person`, `origin = generated`, `source_url = null`, created in try-order — **id order is the verification order** for P1.9 | Keeps MillionVerifier spend to the two people we would email; no separate rank column needed |
+| D66 | 2026-11-04 | A generated address that is on the suppression list suppresses the company (existing gate in `AdvanceLeadPipelineAction`) | An opted-out founder means no outreach to that company |
 
 ## Open questions
 

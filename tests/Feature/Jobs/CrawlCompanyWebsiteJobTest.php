@@ -201,7 +201,7 @@ it('records Laravel evidence, stores facts but never HTML, and finishes the step
         ->and($pages->every(fn (CrawledPage $p) => ! str_contains(json_encode($p->extracted), '<')))->toBeTrue()
         ->and($company->company_type)->toBe(CompanyType::Agency)
         ->and($company->status)->toBe(LeadStatus::Enriching)
-        ->and($company->pipeline_step)->toBe(PipelineStep::BuildEmailCandidates)
+        ->and($company->pipeline_step)->toBe(PipelineStep::VerifyEmails) // crawl → build_email_candidates (local) → verify_emails
         ->and($company->pipelineEvents()->where('step', PipelineStep::Crawl)->where('message', 'Crawled 5 page(s)')->exists())->toBeTrue();
 });
 
@@ -222,7 +222,7 @@ it('skips the whole site when robots.txt disallows the home page', function () {
     expect(requestedUrls())->toBe([SITE.'/robots.txt'])
         ->and($company->crawledPages()->sole()->extracted['skipped'])->toBe('robots')
         ->and($company->pipelineEvents()->where('step', PipelineStep::Crawl)->where('outcome', PipelineOutcome::Skipped)->sole()->message)->toContain('robots.txt')
-        ->and($company->pipeline_step)->toBe(PipelineStep::BuildEmailCandidates);
+        ->and($company->pipeline_step)->toBe(PipelineStep::VerifyEmails); // crawl → build_email_candidates (local) → verify_emails
 });
 
 it('obeys rules addressed to LeadRadarBot and its Crawl-delay', function () {
@@ -305,5 +305,5 @@ it('re-classifies a direct client using the website and its ads', function () {
     crawlAll($company);
 
     expect($company->refresh()->company_type)->toBe(CompanyType::DirectClient)
-        ->and($company->pipeline_step)->toBe(PipelineStep::BuildEmailCandidates);
+        ->and($company->pipeline_step)->toBe(PipelineStep::VerifyEmails); // crawl → build_email_candidates (local) → verify_emails
 });
