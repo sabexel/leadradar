@@ -67,6 +67,7 @@ return [
         'country' => 'gb',
         'timeout' => 15,
         'per_minute' => 25,
+        'max_pages' => 10, // safety stop per keyword per run (10 × 50 ads)
     ],
 
     'millionverifier' => [

@@ -92,6 +92,6 @@ final class FetchReedJobsJob implements ShouldBeUnique, ShouldQueue
             return false;
         }
 
-        return $result->totalResults === null || $this->page * $take < $result->totalResults;
+        return $result->hasMoreAfter($this->page, $take);
     }
 }

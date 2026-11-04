@@ -28,4 +28,12 @@ final readonly class JobSearchPage
     {
         return $this->ads->contains(fn (JobAdData $ad): bool => $ad->isWithinDays($days));
     }
+
+    /**
+     * Whether results remain after this 1-based page. Unknown totals count as "maybe more".
+     */
+    public function hasMoreAfter(int $page, int $perPage): bool
+    {
+        return $this->totalResults === null || $page * $perPage < $this->totalResults;
+    }
 }

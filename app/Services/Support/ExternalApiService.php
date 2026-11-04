@@ -50,7 +50,7 @@ abstract class ExternalApiService
         } catch (ConnectionException $e) {
             $this->limiter->record($this->service(), $endpoint, null, $this->elapsedMs($started), $cost);
 
-            throw new ExternalServiceException($this->service(), 'connection failed: '.$e->getMessage(), null, $e);
+            throw new ExternalServiceException($this->service(), 'connection failed: '.$this->redact($e->getMessage()));
         }
 
         $this->limiter->record($this->service(), $endpoint, $response->status(), $this->elapsedMs($started), $cost);
@@ -100,6 +100,14 @@ abstract class ExternalApiService
         // Retry server errors and 429 only — never other 4xx (docs/04).
         return $e instanceof RequestException
             && ($e->response->serverError() || $e->response->status() === 429);
+    }
+
+    /**
+     * Strip credentials from text that may contain a request URL (some APIs take keys as query params).
+     */
+    private function redact(string $text): string
+    {
+        return (string) preg_replace('/([?&](?:app_id|app_key|api|api_key|key|token)=)[^&\s"\']+/i', '$1[redacted]', $text);
     }
 
     private function retryAfter(Response $response): int

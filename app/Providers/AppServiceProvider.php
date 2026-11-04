@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Enums\ExternalService;
+use App\Services\JobBoards\AdzunaService;
 use App\Services\JobBoards\ReedService;
 use App\Services\Support\ApiUsageLimiter;
 use Carbon\CarbonImmutable;
@@ -22,6 +23,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(ApiUsageLimiter::class);
         $this->app->singleton(ReedService::class);
+        $this->app->singleton(AdzunaService::class);
     }
 
     /**

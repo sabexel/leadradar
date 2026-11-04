@@ -7,16 +7,16 @@
 
 ## Current status
 
-- **Phase:** P1 — in progress (P0.6 still awaits a first green run on GitHub)
-- **Last completed task:** P1.1 Reed service + jobs
-- **Working on:** P1.2
-- **Blocked by:** — (building with faked APIs; live runs need the owner's API keys and the GitHub push)
+- **Phase:** P1 — in progress
+- **Last completed task:** P1.2 Adzuna service + job
+- **Working on:** P1.3
+- **Blocked by:** — (building with faked APIs; owner is registering API keys)
 
 ## Next step
 
-1. **P1.2** — `AdzunaService::search()` → `JobSearchPage` + `FetchAdzunaJobsJob`, reusing `ExternalApiService`, `InteractsWithServiceLimits` and `IngestJobAdAction`. Confirm Adzuna docs + free-tier limits first.
-2. Owner (still open): create the GitHub repo + push so P0.6 can be ticked; add API keys to `.env`.
-3. When a real `REED_API_KEY` exists, run one live search and compare the JSON keys with `tests/Fixtures/reed/*.json` (D23).
+1. **P1.3** — complete `IngestJobAdAction`: `RecruiterDetector` skip (Adzuna includes recruiter ads, e.g. fixture `Sample Example Recruitment`), `CompanyMatcher` dedupe, suppression check, create Company (`discovered`), hand over to `AdvanceLeadPipelineAction`. Update the Reed/Adzuna job tests that currently expect recruiter ads to become Signals.
+2. Owner: put API keys in `.env`; then verify Reed JSON keys (D23) and the Adzuna limits shown in the Adzuna account (D31) with one live call each.
+3. Confirm the Hostinger plan offers PHP 8.4+ (D30).
 
 ---
 
@@ -34,7 +34,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 
 ### P1 — Core pipeline (UK, job-ad signal)
 - [x] P1.1 `ReedService` + `FetchReedJobsJob` + `FetchReedJobDetailJob`
-- [ ] P1.2 `AdzunaService` + `FetchAdzunaJobsJob`
+- [x] P1.2 `AdzunaService` + `FetchAdzunaJobsJob`
 - [ ] P1.3 `IngestJobAdAction` (dedupe, recruiter filter, create/attach Company)
 - [ ] P1.4 `CompaniesHouseService` (search, profile, officers) + jobs
 - [ ] P1.5 `CompanyClassifier` (agency / direct client / recruiter / offshore) from SIC + text
@@ -102,6 +102,11 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 | D27 | 2026-11-03 | `FetchReedJobsJob` queues `FetchReedJobDetailJob` only for ads within `signal.max_age_days` that are not already Signals; next page only if the page is non-empty, has a fresh ad, `page × 100 < totalResults` and `page < services.reed.max_pages` (10). Daily target checked at the start of every page job | docs/05 stop rules; saves detail calls for known ads; Reed has no date filter so freshness is checked per page |
 | D28 | 2026-11-03 | `IngestJobAdAction` currently only upserts the Signal and bumps `scrape_runs.signals_found`; P1.3 adds recruiter filter, company match/create, suppression, pipeline hand-over | Keeps P1.1 testable end-to-end without pulling P1.3 forward |
 | D29 | 2026-11-03 | `Http::preventStrayRequests()` in the base `TestCase`; JSON fixtures via `jsonFixture()` (Pest already owns `fixture()`) | Enforces “no test may hit a real API” globally |
+| D30 | 2026-11-04 | Minimum PHP is **8.4** (`composer.json` `php: ^8.4`, `config.platform.php = 8.4.1`, CI on 8.4); CLAUDE.md, README and docs/08 updated | The locked stack (Symfony 8.1, Pest 5, PHPUnit 13) needs PHP ≥ 8.4.1 — the first CI run on 8.3 failed at `composer install`. The platform pin stops a local PHP 8.5 from locking 8.5-only packages. Still satisfies the spec's "8.3+" for the server |
+| D31 | 2026-11-04 | Adzuna: `GET /jobs/gb/search/{page}` with `app_id`/`app_key`, `what`, `results_per_page=50` (max), `max_days_old = signal.max_age_days`, `sort_by=date`; total from `count`. Self-limits 25/min and new setting `cap.adzuna.per_day = 200` | Adzuna's public docs don't state free-tier limits (only shown in the account); 25/min + 250/day are the commonly documented defaults, 200 leaves headroom. Owner to confirm in the Adzuna dashboard |
+| D32 | 2026-11-04 | `FetchAdzunaJobsJob` ingests ads directly (no detail job) | Adzuna has no job-detail endpoint; the search result is all we get |
+| D33 | 2026-11-04 | `ExternalApiService` redacts `app_id`/`app_key`/`key`/`token` query values from connection-error messages and does not chain the original exception | Adzuna (and later MillionVerifier) take keys in the URL; cURL errors include it and would land in logs and `failed_jobs` in a public-repo project |
+| D34 | 2026-11-04 | Public repo: https://github.com/sabexel/leadradar (pushed 2026-11-04). Commits are authored with the owner's own email at the owner's choice | Owner confirmed |
 
 ## Open questions
 

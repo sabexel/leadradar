@@ -100,3 +100,25 @@
 - Decisions: D23–D29.
 - Notes / follow-ups: verify Reed JSON keys against a live response (D23). Reed's rate limit is undocumented;
   self-limit stays 60/min.
+
+## 2026-11-04 — P0.6 fix: CI PHP version + repo published
+- Done: pushed to the public repo https://github.com/sabexel/leadradar (first push hit transient GitHub 500s;
+  succeeded incrementally). First CI run failed at `composer install`: the lockfile needs PHP 8.4.1+.
+  Now `php: ^8.4`, `config.platform.php = 8.4.1`, CI `php-version: '8.4'`; README, CLAUDE.md, docs/08 updated.
+  Pre-publish scan: no `.env`, keys, dumps or prospect data in any commit.
+- Tests: unchanged locally (green). P0.6 stays `[~]` until the rerun on GitHub is green.
+- Decisions: D30, D34.
+- Notes / follow-ups: Hostinger must run PHP 8.4+.
+
+## 2026-11-04 — P1.2 AdzunaService + FetchAdzunaJobsJob
+- Done: `App\Services\JobBoards\AdzunaService::search()` → `JobSearchPage` (HTML stripped from title/description,
+  ISO `created` dates, ads without a company dropped); `FetchAdzunaJobsJob` (one page; ingests fresh unknown ads
+  via `IngestJobAdAction`; next page while non-empty, fresh, `page × 50 < count`, `page < max_pages`). Shared
+  `JobSearchPage::hasMoreAfter()` now used by Reed too. `services.adzuna.max_pages = 10`; setting
+  `cap.adzuna.per_day = 200`. Credential redaction in `ExternalApiService` connection errors.
+- Tests: `tests/Feature/Services/AdzunaServiceTest.php` (7) and `tests/Feature/Jobs/AdzunaJobsTest.php` (9):
+  request params, mapping, per-page cap, usage endpoint label, key redaction, 429, missing creds, daily cap;
+  ingest + run counter, idempotency, max-age filter, stop conditions (empty, last page, max pages, target),
+  cap release. Fixtures `tests/Fixtures/adzuna/`. 123 passing; Pint + Larastan clean.
+- Decisions: D31–D33.
+- Notes / follow-ups: recruiter ads are still stored as Signals until P1.3 adds `RecruiterDetector`.

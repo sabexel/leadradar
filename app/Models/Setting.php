@@ -30,6 +30,7 @@ class Setting extends Model
         'qualify_threshold' => 6.0,
         'cap.millionverifier.per_day' => 150,
         'cap.brave.per_day' => 150,
+        'cap.adzuna.per_day' => 200,
         'cap.companies_house.per_5min' => 500,
         'cap.crawler.pages_per_company' => 6,
         'search.keywords' => ['laravel'],
