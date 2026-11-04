@@ -185,6 +185,34 @@ class Company extends Model
     }
 
     /**
+     * Qualified, rejected, suppressed or errored: the pipeline does nothing more until a manual retry.
+     */
+    public function isFinished(): bool
+    {
+        return in_array($this->status, [LeadStatus::Qualified, LeadStatus::Rejected, LeadStatus::Suppressed, LeadStatus::Error], true);
+    }
+
+    /**
+     * Whether the pipeline is waiting on this step (jobs bail out otherwise, which makes them idempotent).
+     */
+    public function isAwaiting(PipelineStep $step): bool
+    {
+        return ! $this->isFinished() && $this->pipeline_step === $step;
+    }
+
+    /**
+     * Fail a hard gate: status rejected with a reason, and a timeline entry at the step where it happened.
+     *
+     * @param  array<string, mixed>|null  $context
+     */
+    public function reject(RejectReason $reason, ?string $message = null, ?array $context = null): void
+    {
+        $this->update(['status' => LeadStatus::Rejected, 'reject_reason' => $reason]);
+
+        $this->recordEvent($this->pipeline_step, PipelineOutcome::Rejected, $message ?? $reason->value, $context);
+    }
+
+    /**
      * Retention (docs/09): never-contacted companies with no activity for 12 months.
      *
      * @return Builder<static>

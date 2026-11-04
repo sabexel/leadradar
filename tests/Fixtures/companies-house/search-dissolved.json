@@ -1,0 +1,16 @@
+{
+    "kind": "search#companies",
+    "total_results": 1,
+    "items": [
+        {
+            "kind": "searchresults#company",
+            "company_number": "00999999",
+            "title": "EXAMPLE DIGITAL LIMITED",
+            "company_status": "dissolved",
+            "company_type": "ltd",
+            "date_of_creation": "2001-01-01",
+            "address_snippet": "3 Old Lane, Bristol, BS1 1AA",
+            "address": { "locality": "Bristol", "postal_code": "BS1 1AA" }
+        }
+    ]
+}

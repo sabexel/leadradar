@@ -32,12 +32,13 @@ abstract class ExternalApiService
 
     /**
      * @param  array<string, mixed>  $query
+     * @param  bool  $allowNotFound  return 404 responses to the caller instead of throwing
      *
      * @throws RateLimitedException
      * @throws DailyCapReachedException
      * @throws ExternalServiceException
      */
-    protected function get(string $path, array $query, string $endpoint, float $cost = 1.0): Response
+    protected function get(string $path, array $query, string $endpoint, float $cost = 1.0, bool $allowNotFound = false): Response
     {
         $this->limiter->ensureAvailable($this->service(), $cost);
 
@@ -57,6 +58,10 @@ abstract class ExternalApiService
 
         if ($response->status() === 429) {
             throw new RateLimitedException($this->service(), $this->retryAfter($response), 'provider returned 429');
+        }
+
+        if ($allowNotFound && $response->notFound()) {
+            return $response;
         }
 
         if ($response->failed()) {

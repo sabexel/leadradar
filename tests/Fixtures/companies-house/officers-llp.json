@@ -1,0 +1,25 @@
+{
+    "kind": "officer-list",
+    "active_count": 3,
+    "resigned_count": 0,
+    "total_results": 3,
+    "items": [
+        {
+            "name": "MEMBER, Lee",
+            "officer_role": "llp-member",
+            "appointed_on": "2019-04-01",
+            "country_of_residence": "England"
+        },
+        {
+            "name": "PARTNER, Sam Robin",
+            "officer_role": "llp-designated-member",
+            "appointed_on": "2016-09-01",
+            "country_of_residence": "England"
+        },
+        {
+            "name": "SAMPLE PARTNERS HOLDINGS LIMITED",
+            "officer_role": "corporate-llp-designated-member",
+            "appointed_on": "2016-09-01"
+        }
+    ]
+}

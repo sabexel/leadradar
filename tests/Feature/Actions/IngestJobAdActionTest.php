@@ -9,11 +9,15 @@ use App\Enums\PipelineStep;
 use App\Enums\RejectReason;
 use App\Enums\SignalSource;
 use App\Enums\SuppressionType;
+use App\Jobs\Enrichment\SearchCompaniesHouseJob;
 use App\Models\Company;
 use App\Models\ScrapeRun;
 use App\Models\Signal;
 use App\Models\Suppression;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Queue;
+
+beforeEach(fn () => Queue::fake());
 
 function jobAd(string $id = '1001', string $employer = 'Example Digital Ltd', SignalSource $source = SignalSource::Reed, ?string $description = 'Laravel role in our small agency.'): JobAdData
 {
@@ -37,7 +41,7 @@ function ingest(JobAdData $ad, ?ScrapeRun $run = null): ?Signal
     return app(IngestJobAdAction::class)->run($ad, $run);
 }
 
-it('creates a discovered company and a linked signal', function () {
+it('creates a company, links the signal and queues the registry search', function () {
     $signal = ingest(jobAd());
 
     $company = Company::sole();
@@ -47,8 +51,10 @@ it('creates a discovered company and a linked signal', function () {
         ->and($company->normalised_name)->toBe('example digital')
         ->and($company->location)->toBe('Manchester')
         ->and($company->country)->toBe('GB')
-        ->and($company->status)->toBe(LeadStatus::Discovered)
+        ->and($company->status)->toBe(LeadStatus::Enriching)
         ->and($company->pipeline_step)->toBe(PipelineStep::RegistrySearch);
+
+    Queue::assertPushed(SearchCompaniesHouseJob::class, fn ($job) => $job->companyId === $company->id);
 });
 
 it('gives one signal and one company when the same ad is ingested twice', function () {
@@ -113,13 +119,13 @@ it('does not re-advance or change an existing company that already left discover
         ->and($existing->pipelineEvents)->toHaveCount(0);
 });
 
-it('keeps a brand-new company discovered: it has no domain or number to match suppressions yet', function () {
+it('does not suppress a brand-new company: it has no domain or number to match yet', function () {
     // Suppression applies once identifiers are known (registry number in P1.4, domain in P1.6).
     Suppression::factory()->create(['type' => SuppressionType::Domain, 'value' => 'example-digital.test']);
 
     ingest(jobAd());
 
-    expect(Company::sole()->status)->toBe(LeadStatus::Discovered);
+    expect(Company::sole()->status)->toBe(LeadStatus::Enriching);
 });
 
 it('ignores employer names that normalise to nothing', function () {

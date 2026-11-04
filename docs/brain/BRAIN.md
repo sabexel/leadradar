@@ -8,14 +8,14 @@
 ## Current status
 
 - **Phase:** P1 — in progress
-- **Last completed task:** P1.3 Ingest (recruiter filter, dedupe, company creation)
-- **Working on:** P1.4
+- **Last completed task:** P1.4 Companies House (search, profile, officers) + jobs
+- **Working on:** P1.5
 - **Blocked by:** — (building with faked APIs; owner is registering API keys)
 
 ## Next step
 
-1. **P1.4** — `CompaniesHouseService` (`searchCompanies`, `getProfile`, `getOfficers`) + DTOs + `SearchCompaniesHouseJob`, `FetchCompanyProfileJob`, `FetchCompanyOfficersJob` + `ApplyCompaniesHouseResultAction`; wire the three registry steps into `AdvanceLeadPipelineAction` (the suppression gate there then also catches suppressed company numbers). Matching via `CompanyMatcher::similarity() ≥ 0.85` + active. Don't store DOB. Confirm CH API docs first.
-2. Owner: put API keys in `.env`; then verify Reed JSON keys (D23) and Adzuna limits (D31) with one live call each.
+1. **P1.5** — `CompanyClassifier` (agency / direct_client / recruiter / offshore / unknown from SIC + name, later + crawl text) + `OffshoreSignalDetector` (text part); `RecruiterDetector::hasRecruiterSicCode()` already exists. Wire the `classify` step into `AdvanceLeadPipelineAction` (sync, no job): recruiter → `rejected(recruiter)`, else → `find_website`. Companies now arrive at `classify` after the officers step.
+2. Owner: put API keys in `.env`; then verify Reed JSON keys (D23), Adzuna limits (D31) and one Companies House search with one live call each.
 3. Confirm the Hostinger plan offers PHP 8.4+ (D30).
 
 ---
@@ -36,7 +36,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 - [x] P1.1 `ReedService` + `FetchReedJobsJob` + `FetchReedJobDetailJob`
 - [x] P1.2 `AdzunaService` + `FetchAdzunaJobsJob`
 - [x] P1.3 `IngestJobAdAction` (dedupe, recruiter filter, create/attach Company)
-- [ ] P1.4 `CompaniesHouseService` (search, profile, officers) + jobs
+- [x] P1.4 `CompaniesHouseService` (search, profile, officers) + jobs
 - [ ] P1.5 `CompanyClassifier` (agency / direct client / recruiter / offshore) from SIC + text
 - [ ] P1.6 `BraveSearchService::findCompanyWebsite()` + job
 - [ ] P1.7 `WebsiteCrawlerService` (pages, emails, Laravel signals, offshore signals) + job
@@ -112,6 +112,14 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 | D37 | 2026-11-04 | `AdvanceLeadPipelineAction` is built incrementally: now = finished-status guard + suppression gate; each later step adds its dispatch. Ingest advances **only newly created** companies; a new signal for an existing company just attaches | Avoids pulling P1.12 forward; existing companies are already in/after the pipeline (re-scoring covers new evidence) |
 | D38 | 2026-11-04 | `SuppressionList::matchFor()` matches domain, company number or any of the company's emails (all lowercased). The PipelineEvent records only the suppression `type` + `reason`, never the value | The value may be an email address (personal data) |
 | D39 | 2026-11-04 | `Company::recordEvent(step, outcome, message, context)` is the one way to write a PipelineEvent | Consistent timeline entries from every action |
+| D40 | 2026-11-04 | Companies House search asks for `items_per_page=10` (docs/04 said 5) | Same single call, more candidates for the tie-break and the review log |
+| D41 | 2026-11-04 | `RegistryMatcher`: candidates = Jaro-Winkler ≥ 0.85 on normalised names; active preferred; active candidates within 0.02 of the best are a tie, broken by the signal town (text before the first comma) appearing in the CH locality/address snippet; still tied → `rejected(not_on_registry)` with candidates (number, title, status, locality, similarity — company data only) in the event | docs/04 rules made concrete; ambiguous leads go to manual review instead of guessing |
+| D42 | 2026-11-04 | Only inactive candidates (e.g. dissolved) → `rejected(not_active)` straight from the search, storing number + status; no profile call | Acceptance "dissolved → rejected" without spending a second call |
+| D43 | 2026-11-04 | A second employer name that resolves to an already-known company number is **merged**: its signals move to the existing company, the new row is deleted, the existing company gets a "Merged duplicate" event | Trading vs legal names would otherwise create two leads for one company |
+| D44 | 2026-11-04 | Profile gates: `not_active` = status ≠ `active` or `has_been_liquidated`; `wrong_legal_form` = type not exactly `ltd`/`llp`/`plc` (guarantee companies, unlimited, LPs rejected); `dormant` = `accounts.last_accounts.type = dormant`. `accounts_category` stores the raw last-accounts type | docs/06 gates; strict list is the safe PECR reading |
+| D45 | 2026-11-04 | Officers: founder roles = `director`, `llp-member`, `llp-designated-member` (natural persons only; secretaries and `corporate-*` excluded). All stored with `source = companies_house` + `source_url` = public CH officers page; active ones get positions 1..n by earliest `appointed_on`, resigned ones are kept with `position = null`. The `Officer` DTO has no DOB, nationality or address fields at all. People upsert key = company + source + first + last + appointed_on | docs/04 + docs/09 (never store DOB); a re-run gives identical rows |
+| D46 | 2026-11-04 | Enrichment jobs bail unless `Company::isAwaiting(step)`; final failure → `status = error` + failed event (`FailsCompanyStep` trait). `AdvanceLeadPipelineAction` sets `enriching` when it queues the first job; registry steps only run for `country = GB` | Idempotent jobs; docs/05 "failed job → error, Retry step" |
+| D47 | 2026-11-04 | `ExternalApiService::get(..., allowNotFound: true)` returns 404s to the caller; CH profile/officers 404 → null → `rejected(not_on_registry)` | A missing company is data, not a service failure |
 
 ## Open questions
 

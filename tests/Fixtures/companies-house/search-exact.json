@@ -1,0 +1,42 @@
+{
+    "kind": "search#companies",
+    "total_results": 3,
+    "items_per_page": 10,
+    "start_index": 0,
+    "items": [
+        {
+            "kind": "searchresults#company",
+            "company_number": "01234567",
+            "title": "EXAMPLE DIGITAL LTD",
+            "company_status": "active",
+            "company_type": "ltd",
+            "date_of_creation": "2015-02-10",
+            "address_snippet": "1 Example Street, Manchester, M1 1AA",
+            "address": {
+                "address_line_1": "1 Example Street",
+                "locality": "Manchester",
+                "postal_code": "M1 1AA"
+            }
+        },
+        {
+            "kind": "searchresults#company",
+            "company_number": "07654321",
+            "title": "EXAMPLE DIGITAL HOLDINGS LIMITED",
+            "company_status": "active",
+            "company_type": "ltd",
+            "date_of_creation": "2019-07-01",
+            "address_snippet": "2 Sample Road, London, EC1A 1AA",
+            "address": { "locality": "London", "postal_code": "EC1A 1AA" }
+        },
+        {
+            "kind": "searchresults#company",
+            "company_number": "00999999",
+            "title": "EXAMPLE DIGITAL LIMITED",
+            "company_status": "dissolved",
+            "company_type": "ltd",
+            "date_of_creation": "2001-01-01",
+            "address_snippet": "3 Old Lane, Bristol, BS1 1AA",
+            "address": { "locality": "Bristol", "postal_code": "BS1 1AA" }
+        }
+    ]
+}

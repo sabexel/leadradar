@@ -147,3 +147,21 @@
   Pint, Larastan, vp check clean.
 - Decisions: D35–D39. Known issue added ("people" keyword).
 - Notes / follow-ups: P1.4 wires the registry steps into `AdvanceLeadPipelineAction`.
+
+## 2026-11-04 — P1.4 CompaniesHouseService (search, profile, officers) + jobs
+- Done: DTOs `CompanySearchResult`, `CompanyProfile`, `Officer` (no DOB/nationality/address), `RegistryMatch` +
+  enum `RegistryMatchOutcome`; `App\Services\CompaniesHouse\CompaniesHouseService` (`searchCompanies`,
+  `getProfile`, `getOfficers`, `parseName`); local `RegistryMatcher`; `ApplyCompaniesHouseResultAction`
+  (`applySearch` incl. duplicate-number merge, `applyProfile` gates, `applyOfficers` founders);
+  jobs `SearchCompaniesHouseJob`, `FetchCompanyProfileJob`, `FetchCompanyOfficersJob` on the `registry` queue
+  with `RateLimited('companies_house')`; trait `FailsCompanyStep`; `Company::reject()`, `isFinished()`,
+  `isAwaiting()`; registry steps wired into `AdvanceLeadPipelineAction`; `ExternalApiService` 404 option.
+- Tests: `tests/Feature/Services/CompaniesHouseServiceTest.php` (10) and
+  `tests/Feature/Jobs/CompaniesHouseJobsTest.php` (25): exact match, ambiguous (rejected + candidates), town
+  tie-break, dissolved (rejected), no match, duplicate-number merge, suppressed number, profile stored, LLP/PLC
+  accepted, gates (dissolved, liquidation, liquidated, unlimited, LP, dormant), 404, founders ordering, resigned
+  excluded from Founder 1/2, secretaries/corporate excluded, LLP members parsed, no DOB stored, idempotent
+  officers, step guard, failure → error, ingest queues the search, non-GB skipped. Action tests updated for the
+  queued search. 226 passing; Pint, Larastan, vp check, tsc clean.
+- Decisions: D40–D47.
+- Notes / follow-ups: companies now stop at `classify` until P1.5 wires it in.

@@ -1,0 +1,16 @@
+{
+    "kind": "search#companies",
+    "total_results": 1,
+    "items": [
+        {
+            "kind": "searchresults#company",
+            "company_number": "05555555",
+            "title": "UNRELATED SAMPLE HOLDINGS LTD",
+            "company_status": "active",
+            "company_type": "ltd",
+            "date_of_creation": "2010-01-01",
+            "address_snippet": "5 Other Street, York, YO1 1AA",
+            "address": { "locality": "York", "postal_code": "YO1 1AA" }
+        }
+    ]
+}

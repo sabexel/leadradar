@@ -10,9 +10,13 @@ use App\Enums\PipelineStep;
 use App\Enums\RejectReason;
 use App\Enums\SuppressionReason;
 use App\Enums\SuppressionType;
+use App\Jobs\Enrichment\SearchCompaniesHouseJob;
 use App\Models\Company;
 use App\Models\EmailAddress;
 use App\Models\Suppression;
+use Illuminate\Support\Facades\Queue;
+
+beforeEach(fn () => Queue::fake());
 
 function advance(Company $company): Company
 {
@@ -51,12 +55,14 @@ it('suppresses by company number and by any company email', function (string $ty
     expect(advance($company)->status)->toBe(LeadStatus::Suppressed);
 })->with(['number', 'email']);
 
-it('leaves companies that match nothing untouched', function () {
+it('moves companies that match nothing on to their next step', function () {
     Suppression::factory()->create(['type' => SuppressionType::Domain, 'value' => 'someone-else.test']);
     $company = Company::factory()->create(['domain' => 'example-digital.test']);
 
-    expect(advance($company)->status)->toBe(LeadStatus::Discovered)
+    expect(advance($company)->status)->toBe(LeadStatus::Enriching)
         ->and($company->pipelineEvents)->toHaveCount(0);
+
+    Queue::assertPushed(SearchCompaniesHouseJob::class);
 });
 
 it('does nothing for companies that already finished', function (LeadStatus $status) {

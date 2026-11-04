@@ -1,0 +1,26 @@
+{
+    "kind": "search#companies",
+    "total_results": 2,
+    "items": [
+        {
+            "kind": "searchresults#company",
+            "company_number": "01234567",
+            "title": "EXAMPLE DIGITAL LTD",
+            "company_status": "active",
+            "company_type": "ltd",
+            "date_of_creation": "2015-02-10",
+            "address_snippet": "1 Example Street, Manchester, M1 1AA",
+            "address": { "locality": "Manchester", "postal_code": "M1 1AA" }
+        },
+        {
+            "kind": "searchresults#company",
+            "company_number": "08888888",
+            "title": "EXAMPLE DIGITAL LIMITED",
+            "company_status": "active",
+            "company_type": "ltd",
+            "date_of_creation": "2017-05-05",
+            "address_snippet": "9 Sample Way, Leeds, LS1 1AA",
+            "address": { "locality": "Leeds", "postal_code": "LS1 1AA" }
+        }
+    ]
+}

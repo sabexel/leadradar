@@ -1,0 +1,28 @@
+{
+    "company_name": "EXAMPLE DIGITAL LTD",
+    "company_number": "01234567",
+    "company_status": "active",
+    "type": "ltd",
+    "jurisdiction": "england-wales",
+    "date_of_creation": "2015-02-10",
+    "sic_codes": ["62012", "73110"],
+    "has_been_liquidated": false,
+    "has_insolvency_history": false,
+    "registered_office_address": {
+        "address_line_1": "1 Example Street",
+        "locality": "Manchester",
+        "postal_code": "M1 1AA",
+        "country": "England"
+    },
+    "accounts": {
+        "last_accounts": {
+            "made_up_to": "2026-02-28",
+            "type": "micro-entity"
+        },
+        "next_due": "2027-11-30"
+    },
+    "links": {
+        "self": "/company/01234567",
+        "officers": "/company/01234567/officers"
+    }
+}
