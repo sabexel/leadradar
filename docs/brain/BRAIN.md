@@ -8,13 +8,13 @@
 ## Current status
 
 - **Phase:** P1 — in progress
-- **Last completed task:** P1.9 MillionVerifier email verification
-- **Working on:** P1.10
+- **Last completed task:** P1.10 LinkedIn URL lookup via Brave
+- **Working on:** P1.11
 - **Blocked by:** — (building with faked APIs; owner is registering API keys)
 
 ## Next step
 
-1. **P1.10** — `BraveSearchService::findLinkedInProfile(fullName, companyName)` (`site:linkedin.com/in "{full name}" "{company}"`; accept only `linkedin.com/in/...` URLs whose title contains first + last name; store `linkedin_url` + `linkedin_source_url`, never fetch LinkedIn) + `FindLinkedInProfileJob` (one person per job, `web` queue, `RateLimited('brave')`, Brave daily cap). Founder 1 then Founder 2; skip people who already have a URL. Wire `find_linkedin` → `qualify`.
+1. **P1.11** — `LeadScoringService` + `QualifyCompanyAction` exactly per docs/06 (gates + 0–10 score + breakdown, threshold `qualify_threshold`); wire `qualify` (local) → `done` with `qualified`/`rejected(reason)`. Companies now stop at `qualify`.
 2. Owner: put API keys in `.env`; one live call each to confirm Reed JSON keys (D23), Adzuna limits (D31), CH search, Brave query + quota, and MillionVerifier result values/error texts with `API_KEY_FOR_TEST` (D67).
 3. Owner: publish https://webwayout.co.uk/bot (crawler UA points there, docs/09).
 4. Confirm the Hostinger plan offers PHP 8.4+ (D30).
@@ -43,7 +43,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 - [x] P1.7 `WebsiteCrawlerService` (pages, emails, Laravel signals, offshore signals) + job
 - [x] P1.8 `EmailPatternService` (local) — candidate founder emails
 - [x] P1.9 `MillionVerifierService` + `VerifyEmailJob` (stop at first `ok`, honour credit cap)
-- [ ] P1.10 `BraveSearchService::findLinkedInProfile()` + job
+- [x] P1.10 `BraveSearchService::findLinkedInProfile()` + job
 - [ ] P1.11 `LeadScoringService` + gates (sync) → status `qualified` / `rejected`
 - [ ] P1.12 `AdvanceLeadPipelineAction` state machine wiring all steps
 - [ ] P1.13 Scheduler: daily discovery run, stops at daily qualified target
@@ -144,6 +144,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 | D68 | 2026-11-04 | `VerificationPlanner` order: Founder 1, Founder 2 (crawled addresses before guesses, guesses by id = D65 try-order; a founder is done at the first `ok`), then the contact and careers inboxes. Skips anything verified within `reverify_after_days` (90). Once any address on a domain answers `catch_all`, nothing else on that domain is verified | docs/05 order; catch-all servers accept every address, so further guesses waste credits |
 | D69 | 2026-11-04 | At the end of `verify_emails` each founder's `email_id` = best address: `ok` > `catch_all` > `unknown` > unverified **crawled**; ties → crawled first, then try-order. Invalid, disposable, error and unverified guesses are never picked; no candidate → `email_id = null` | Feeds the score (Founder 1 `ok` +1.5, `catch_all` +0.5) and the "contactable" gate |
 | D70 | 2026-11-04 | `VerifyEmailJob(companyId, emailAddressId)` — one address, one credit; unique per address; a re-run finds the address freshly verified and spends nothing | docs/05 one call per job + idempotency |
+| D71 | 2026-11-04 | LinkedIn: `findLinkedInProfile(first, last, company)` (spec had fullName) with query `site:linkedin.com/in "{first last}" "{trading name minus Ltd/Limited/LLP/PLC}"`. Accept only `*.linkedin.com/in/{slug}`; names matched as whole words only in the title part before the first spaced separator (company names can contain the surname). `linkedin_url` = canonical `https://www.linkedin.com/in/{slug}`, `linkedin_source_url` = raw result URL. New column `people.linkedin_checked_at`: no repeat query within 30 days (docs/09). Never requests linkedin.com | docs/04 + CLAUDE.md hard rule; a test asserts no request to linkedin.com |
 
 ## Open questions
 

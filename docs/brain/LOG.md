@@ -241,3 +241,14 @@
 - Decisions: D67–D70.
 - Notes / follow-ups: confirm MillionVerifier result values/error texts with the demo key (D67). Companies now
   stop at `find_linkedin` until P1.10.
+
+## 2026-11-04 — P1.10 BraveSearchService::findLinkedInProfile() + FindLinkedInProfileJob
+- Done: local `LinkedInProfileSelector`; `BraveSearchService::findLinkedInProfile()`; `ApplyLinkedInResultAction`
+  (next founder, store URL + source, finish → `qualify`); `FindLinkedInProfileJob` (`web` queue,
+  `RateLimited('brave')`); migration `people.linkedin_checked_at`; `find_linkedin` wired into the pipeline.
+- Tests: `tests/Unit/Search/LinkedInProfileSelectorTest.php`, `tests/Feature/Jobs/FindLinkedInProfileJobTest.php`
+  (query format, only /in/ URLs with first + last name, wrong-surname/company/post results rejected, canonical URL
+  + source stored, linkedin.com never requested, 30-day skip, cap release, no double query). Verify test updated
+  (no founders → `qualify`). All passing locally; Pint, Larastan, vp check, tsc clean. CI not yet checked.
+- Decisions: D71.
+- Notes / follow-ups: companies now stop at `qualify` until P1.11.

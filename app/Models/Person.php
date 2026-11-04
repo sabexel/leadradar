@@ -31,6 +31,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $country_of_residence
  * @property string|null $linkedin_url
  * @property string|null $linkedin_source_url
+ * @property Carbon|null $linkedin_checked_at
  * @property int|null $email_id
  * @property DataSource $source
  * @property string|null $source_url
@@ -41,7 +42,7 @@ use Illuminate\Support\Carbon;
 #[Table('people')]
 #[Fillable([
     'company_id', 'position', 'first_name', 'last_name', 'preferred_name', 'role', 'appointed_on',
-    'resigned_on', 'country_of_residence', 'linkedin_url', 'linkedin_source_url', 'email_id',
+    'resigned_on', 'country_of_residence', 'linkedin_url', 'linkedin_source_url', 'linkedin_checked_at', 'email_id',
     'source', 'source_url',
 ])]
 class Person extends Model
@@ -59,6 +60,7 @@ class Person extends Model
             'role' => PersonRole::class,
             'appointed_on' => 'date',
             'resigned_on' => 'date',
+            'linkedin_checked_at' => 'datetime',
             'source' => DataSource::class,
         ];
     }

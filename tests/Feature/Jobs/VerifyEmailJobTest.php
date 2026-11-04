@@ -219,7 +219,7 @@ it('does not spend a second credit when a job runs twice', function () {
     Http::assertSentCount(1);
 });
 
-it('moves straight on to find_linkedin when there is nothing to verify', function () {
+it('moves straight on when there is nothing to verify', function () {
     Http::fake();
     $company = Company::factory()->create(['status' => LeadStatus::Enriching, 'pipeline_step' => PipelineStep::VerifyEmails]);
 
@@ -227,7 +227,9 @@ it('moves straight on to find_linkedin when there is nothing to verify', functio
 
     Http::assertNothingSent();
     Queue::assertNotPushed(VerifyEmailJob::class);
-    expect($company->refresh()->pipeline_step)->toBe(PipelineStep::FindLinkedIn);
+    expect($company->pipelineEvents()->where('step', PipelineStep::VerifyEmails)->exists())->toBeTrue()
+        // no founders → nobody to look up on LinkedIn either → qualify
+        ->and($company->refresh()->pipeline_step)->toBe(PipelineStep::Qualify);
 });
 
 it('queues one job per address on the verify queue', function () {

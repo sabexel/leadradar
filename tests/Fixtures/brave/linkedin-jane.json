@@ -1,0 +1,32 @@
+{
+    "type": "search",
+    "query": {
+        "original": "site:linkedin.com/in \"Jane Example\" \"Example Digital\"",
+        "more_results_available": false
+    },
+    "web": {
+        "type": "search",
+        "results": [
+            {
+                "title": "Example Digital | LinkedIn",
+                "url": "https://uk.linkedin.com/company/example-digital",
+                "description": "Example Digital | 12 followers on LinkedIn."
+            },
+            {
+                "title": "Jane Smith - Example Digital | LinkedIn",
+                "url": "https://uk.linkedin.com/in/jane-smith-77",
+                "description": "Account manager at Example Digital."
+            },
+            {
+                "title": "Jane Example on LinkedIn: We're hiring a Laravel developer",
+                "url": "https://www.linkedin.com/posts/jane-example_hiring-activity-123",
+                "description": "A post."
+            },
+            {
+                "title": "Jane Example – Founder – Example Digital | LinkedIn",
+                "url": "https://uk.linkedin.com/in/jane-example-4b2a1?trk=public_profile",
+                "description": "Founder of Example Digital, a Laravel agency in Manchester."
+            }
+        ]
+    }
+}

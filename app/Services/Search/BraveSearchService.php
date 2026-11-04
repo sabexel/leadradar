@@ -25,6 +25,7 @@ final class BraveSearchService extends ExternalApiService
         ApiUsageLimiter $limiter,
         private readonly CompanyMatcher $matcher,
         private readonly WebsiteSelector $websites,
+        private readonly LinkedInProfileSelector $linkedIn,
     ) {
         parent::__construct($limiter);
     }
@@ -50,6 +51,17 @@ final class BraveSearchService extends ExternalApiService
         $query = trim('"'.Str::squish($name).'" '.Str::squish((string) $town));
 
         return $this->websites->select($name, $this->search($query));
+    }
+
+    /**
+     * One query: `site:linkedin.com/in "{full name}" "{company}"`. Returns the matching search result
+     * (its `url` is the raw result URL); the LinkedIn page is never requested.
+     */
+    public function findLinkedInProfile(string $firstName, string $lastName, string $companyName): ?SearchResult
+    {
+        $query = sprintf('site:linkedin.com/in "%s %s" "%s"', Str::squish($firstName), Str::squish($lastName), Str::squish($companyName));
+
+        return $this->linkedIn->select($firstName, $lastName, $this->search($query));
     }
 
     /**

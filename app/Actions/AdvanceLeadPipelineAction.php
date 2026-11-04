@@ -12,6 +12,7 @@ use App\Jobs\Enrichment\CrawlCompanyWebsiteJob;
 use App\Jobs\Enrichment\FetchCompanyOfficersJob;
 use App\Jobs\Enrichment\FetchCompanyProfileJob;
 use App\Jobs\Enrichment\FindCompanyWebsiteJob;
+use App\Jobs\Enrichment\FindLinkedInProfileJob;
 use App\Jobs\Enrichment\SearchCompaniesHouseJob;
 use App\Jobs\Enrichment\VerifyEmailJob;
 use App\Models\Company;
@@ -42,6 +43,7 @@ final class AdvanceLeadPipelineAction
         private readonly BuildFounderEmailCandidatesAction $emailCandidates,
         private readonly VerificationPlanner $verificationPlanner,
         private readonly ApplyVerificationResultAction $verification,
+        private readonly ApplyLinkedInResultAction $linkedIn,
     ) {}
 
     public function run(Company $company): void
@@ -143,6 +145,15 @@ final class AdvanceLeadPipelineAction
 
                 return true;
 
+            case PipelineStep::FindLinkedIn:
+                if ($this->linkedIn->nextPerson($company) !== null) {
+                    return false; // another founder to look up
+                }
+
+                $this->linkedIn->finish($company);
+
+                return true;
+
             default:
                 return false;
         }
@@ -160,7 +171,8 @@ final class AdvanceLeadPipelineAction
             PipelineStep::FindWebsite => new FindCompanyWebsiteJob($company->id),
             PipelineStep::Crawl => ($url = $this->crawlPlanner->next($company)) === null ? null : new CrawlCompanyWebsiteJob($company->id, $url),
             PipelineStep::VerifyEmails => ($email = $this->verificationPlanner->next($company)) === null ? null : new VerifyEmailJob($company->id, $email->id),
-            default => null, // later steps are wired in as they are built (P1.10+)
+            PipelineStep::FindLinkedIn => ($person = $this->linkedIn->nextPerson($company)) === null ? null : new FindLinkedInProfileJob($company->id, $person->id),
+            default => null, // `qualify` is wired in with P1.11
         };
     }
 }
