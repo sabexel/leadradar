@@ -122,3 +122,12 @@
   cap release. Fixtures `tests/Fixtures/adzuna/`. 123 passing; Pint + Larastan clean.
 - Decisions: D31–D33.
 - Notes / follow-ups: recruiter ads are still stored as Signals until P1.3 adds `RecruiterDetector`.
+
+## 2026-11-04 — P0.6 CI green on GitHub
+- Done: second CI failure was `vp check` formatting `tests/Fixtures/adzuna/search.json` (formatted). Run
+  41811595738 on `ef7862c` is green: composer install (PHP 8.4), Pint, Larastan, npm build, vp check, tsc, Pest
+  on MySQL. P0.6 ticked.
+- Tests: all green on GitHub and locally.
+- Decisions: none.
+- Notes / follow-ups: run `npx vp check` locally before every push — it also formats JSON fixtures.
+  GitHub returned intermittent HTTP 500s on push today; a plain retry works.

@@ -30,7 +30,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 - [x] P0.3 `.env.example`, `config/services.php` entries, README skeleton
 - [x] P0.4 Migrations + models + enums for all tables in `docs/03`
 - [x] P0.5 `ApiUsage` logging + per-service daily caps (settings table)
-- [~] P0.6 GitHub Actions: tests + Pint + Larastan on every push (workflow written + passes locally; awaiting first green run on GitHub)
+- [x] P0.6 GitHub Actions: tests + Pint + Larastan on every push
 
 ### P1 — Core pipeline (UK, job-ad signal)
 - [x] P1.1 `ReedService` + `FetchReedJobsJob` + `FetchReedJobDetailJob`
