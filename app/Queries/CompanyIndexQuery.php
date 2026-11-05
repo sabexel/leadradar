@@ -12,9 +12,9 @@ use App\Enums\RejectReason;
 use App\Enums\SignalSource;
 use App\Models\Company;
 use Carbon\CarbonImmutable;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
 use Throwable;
 

@@ -347,3 +347,26 @@
 - Decisions: D88–D90.
 - Notes / follow-ups: company names are not links yet — the detail page is P2.3. "Select all matching" across
   pages is not built (page selection only).
+
+## 2026-11-05 — P2.3 Lead detail page (+ P2.4 outreach status)
+- Done: `CompanyController@show/update/retry/reverify`, `App\Queries\CompanyDetailQuery`, `UpdateCompanyRequest`,
+  `ReverifyEmailJob`, `ApplyReverificationAction`; `ApplyVerificationResultAction::bestFor()` extracted. Routes
+  `companies.show`, `companies.update` (PATCH notes / outreach_status), `companies.retry`,
+  `companies.emails.reverify` (scoped binding). React page `resources/js/pages/companies/show.tsx` (+
+  `types/company-detail.ts`): header with score/status/type badges, website + Companies House links, outreach
+  selector; company card with email sources + verification badges; founder 1/2 cards (role, appointed, source,
+  LinkedIn, email + Re-verify, candidates tried); score breakdown per docs/06 line with item points; Laravel /
+  offshore evidence and job ads; pipeline timeline with Retry / Re-run from step; editable notes. Company names in
+  the leads table now link here.
+- Tests: `tests/Feature/Companies/CompanyShowTest.php` (10): guest/404; full props (company, CH link, founders,
+  candidates, breakdown lines, evidence, signals, events); unscored lead; notes save/clear/max; outreach contacted →
+  replied keeps first contact, not interested suppresses, bad value refused; retry errored lead from a step, refuse
+  qualified, `done` refused; re-verify queued only for the company's own address (404 otherwise); no job for a
+  suppressed lead; job makes one MV call, founder email re-picked, score drops; only good address invalid → rejected
+  `no_valid_email`. 514 passing; Pint, Larastan, vp check, tsc, vp build clean.
+  Manual browser check with the local demo seed: open from the leads table, breadcrumbs, all cards, notes save toast;
+  no console errors. Demo note reset afterwards.
+- Decisions: D91–D92.
+- Notes / follow-ups: `app/Queries/CompanyIndexQuery.php` from P2.2 had Pint issues (missed locally) — fixed in this
+  commit; check that CI for c367415 failed only on that. Demo seed leads have a score but no stored breakdown —
+  the page says so.

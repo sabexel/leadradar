@@ -11,8 +11,10 @@ use App\Enums\PipelineOutcome;
 use App\Enums\PipelineStep;
 use App\Models\Company;
 use App\Models\EmailAddress;
+use App\Models\Person;
 use App\Models\Setting;
 use App\Services\Verification\VerificationPlanner;
+use Illuminate\Support\Collection;
 
 /**
  * Local, sync: store one verification result, and finish the `verify_emails` step.
@@ -50,10 +52,7 @@ final class ApplyVerificationResultAction
         $summary = [];
 
         foreach ($company->founders()->get() as $founder) {
-            $best = $this->planner->forPerson($emails, $founder)
-                ->filter(fn (EmailAddress $e): bool => $this->rank($e) !== null)
-                ->sortBy(fn (EmailAddress $e): array => [$this->rank($e), $e->origin === EmailOrigin::Crawled ? 0 : 1, $e->id])
-                ->first();
+            $best = $this->bestFor($emails, $founder);
 
             $founder->update(['email_id' => $best?->id]);
             $summary["founder_{$founder->position}"] = $best?->verification_status->value;
@@ -67,6 +66,19 @@ final class ApplyVerificationResultAction
         ]);
 
         return $company;
+    }
+
+    /**
+     * The founder's best address so far: verified before catch-all before unknown, crawled before generated.
+     *
+     * @param  Collection<int, EmailAddress>  $emails  all of the company's addresses
+     */
+    public function bestFor(Collection $emails, Person $founder): ?EmailAddress
+    {
+        return $this->planner->forPerson($emails, $founder)
+            ->filter(fn (EmailAddress $e): bool => $this->rank($e) !== null)
+            ->sortBy(fn (EmailAddress $e): array => [$this->rank($e), $e->origin === EmailOrigin::Crawled ? 0 : 1, $e->id])
+            ->first();
     }
 
     /**

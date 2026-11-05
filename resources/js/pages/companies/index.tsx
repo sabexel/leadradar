@@ -46,7 +46,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { bulk, index } from '@/routes/companies';
+import { bulk, index, show } from '@/routes/companies';
 import type {
     CompaniesIndexProps,
     CompanyFilters,
@@ -645,7 +645,12 @@ function CompanyTableRow({
                 <ScoreBadge score={company.score} />
             </TableCell>
             <TableCell className="max-w-56">
-                <div className="truncate font-medium">{company.name}</div>
+                <Link
+                    href={show(company.id)}
+                    className="block truncate font-medium hover:underline"
+                >
+                    {company.name}
+                </Link>
                 {company.website && (
                     <a
                         href={company.website}

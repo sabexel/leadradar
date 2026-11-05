@@ -8,13 +8,13 @@
 ## Current status
 
 - **Phase:** P2 (dashboard) in progress
-- **Last completed task:** P2.2 Leads index (filters, sort, bulk actions)
-- **Working on:** P2.3
+- **Last completed task:** P2.3 Lead detail page + P2.4 outreach status changes
+- **Working on:** P2.5
 - **Blocked by:** — (building with faked APIs; owner is registering API keys)
 
 ## Next step
 
-1. **P2.3** — Lead detail (`/companies/{id}`) per docs/07 §3: header (score badge, status, type, outreach selector, website + Companies House links), company card with email sources + verification badges, founders 1–2 (role, appointed, LinkedIn, email + status, other tried candidates), score breakdown with evidence, Laravel/offshore evidence and signals, pipeline timeline with Retry on failed steps, editable notes. Link company names in the leads table to it. Reuse `components/lead-badges.tsx`, `RetryPipelineStepAction`, `UpdateOutreachStatusAction`. Feature tests + manual browser check.
+1. **P2.5** — CSV export in the outreach-sheet column order (docs/07 "Export format"): `S.no, Company Name, Website, Location, Company House no, Company contact email, Company careers email, Founder 1 First/Last Name, LinkedIn, email, email test, Founder 2 …, Score, Company type, Signal, Signal URL`; `email test` = Verified / Catch-all / Unknown / Invalid / Generated; company numbers kept as text (`="07172996"`). Export the current filtered leads (`CompanyIndexQuery::query()`), plus the bulk "Export CSV" for selected rows. Stream it (no file left on disk — exports are never committed). Feature test on the exact header and a row.
 2. Owner: put API keys in `.env`; one live call each to confirm Reed JSON keys (D23), Adzuna limits (D31), CH search, Brave query + quota, MillionVerifier result values (D67). Then a first real run: `php artisan leadradar:import-contacted <your sheet export>.csv` (keep the file out of the repo) and `php artisan leadradar:discover --manual` with `php artisan queue:work`.
 3. Owner: publish https://webwayout.co.uk/bot (crawler UA points there, docs/09).
 4. Confirm the Hostinger plan offers PHP 8.4+ (D30).
@@ -52,8 +52,8 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 ### P2 — Dashboard
 - [x] P2.1 Dashboard page: counters, charts, last runs
 - [x] P2.2 Companies index: filters, sort, score badge, bulk actions
-- [ ] P2.3 Company detail: all fields, founders, emails + verification, score breakdown, timeline
-- [ ] P2.4 Mark contacted / replied / not interested (outreach status)
+- [x] P2.3 Company detail: all fields, founders, emails + verification, score breakdown, timeline
+- [x] P2.4 Mark contacted / replied / not interested (outreach status)
 - [ ] P2.5 CSV export in the outreach-sheet column order
 - [ ] P2.6 Runs & API usage page; Settings page (caps, target, key status)
 - [ ] P2.7 Manual import: paste domains or upload CSV (e.g. Apollo export) → enrich
@@ -164,6 +164,8 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 | D88 | 2026-11-05 | Leads index filters live in the query string (`status[]`/`outreach[]`/`type[]` or comma lists, `score_min`/`score_max`, `country`, `source`, `qualified_from`/`qualified_to` as London dates, `verified`, `linkedin`, `reject_reason`, `q`, `sort` score/qualified_at/name, `dir`, `per_page` 25/50/100). Invalid values are ignored, never an error (bookmarks keep working). Score sort puts unscored companies last both ways. "Has verified founder email" = a current founder whose chosen email is `ok`. Source = any of the company's signals has that source. Quick chips: Excellent 8–10, Good 6–7.9, Near miss = rejected `below_threshold` with 4–5.9 (docs/06) | docs/07 §2 |
 | D89 | 2026-11-05 | Bulk actions (`POST /companies/bulk`, max 500 ids, current page selection only): Mark contacted / not interested go through `UpdateOutreachStatusAction` (any status other than not_contacted sets `contacted_at` once and never moves it; not interested also suppresses the domain — or the company number without one — with reason `not_interested`; the lead's pipeline status is left alone). Suppress domain (`SuppressCompanyAction`) adds a `manual` domain suppression and stops the lead (`suppressed`); leads without a domain are skipped. Re-run from step uses `RetryPipelineStepAction` (rejected/errored only, others skipped; step optional, `done` not allowed). Result shown as a flash toast with skipped counts. Export CSV comes with P2.5 | Reuses P1 actions; `UpdateOutreachStatusAction` also covers most of P2.4 (the detail-page selector still to wire up) |
 | D90 | 2026-11-05 | shadcn `slider` and `table` written by hand from the registry like D87; the slider imports `@radix-ui/react-slider` (installed) instead of the `radix-ui` umbrella package. Sidebar: Leads added; the starter's footer now links to this repo, Documentation link removed | Same npm-only rule; consistent with the per-package radix deps already used |
+| D91 | 2026-11-05 | Lead page (`/companies/{id}`, `CompanyDetailQuery`): Companies House link = `find-and-update.company-information.service.gov.uk/company/{number}` (only when `registry = companies_house`); registered address rendered in postal order server-side (MySQL JSON loses key order); founder "candidates tried" = every address tied to that person; Retry is offered on the last failed/rejected timeline event and as "Re-run from step" when `RetryPipelineStepAction::canRetry`. Notes: trimmed, empty → null, max 10 000 chars. P2.4 is covered here: the header outreach selector uses `UpdateOutreachStatusAction` (D89), not interested asks to confirm | docs/07 §3, docs/10 P2.4 |
+| D92 | 2026-11-05 | "Re-verify" = `ReverifyEmailJob` (queue `verify`, ONE MillionVerifier call, always spends a credit, MV rate limit + daily cap via `InteractsWithServiceLimits`, nothing sent for a suppressed company/address — checked in the controller and again in the job). `ApplyReverificationAction` stores the result, logs a timeline event, re-picks the founder's best address (`ApplyVerificationResultAction::bestFor`, extracted from `finish()`), and rescores leads the pipeline has finished with (qualified, or rejected below_threshold / no_valid_email) via `QualifyCompanyAction`. A failed re-verify only adds a timeline event — the lead's status is untouched (unlike pipeline jobs) | The button is outside the pipeline, so it must not set `error` or move `pipeline_step` |
 
 ## Open questions
 

@@ -14,11 +14,17 @@ use App\Enums\PipelineStep;
 use App\Enums\RejectReason;
 use App\Enums\SignalSource;
 use App\Http\Requests\BulkCompanyActionRequest;
+use App\Http\Requests\UpdateCompanyRequest;
+use App\Jobs\Enrichment\ReverifyEmailJob;
 use App\Models\Company;
+use App\Models\EmailAddress;
+use App\Queries\CompanyDetailQuery;
 use App\Queries\CompanyIndexQuery;
+use App\Services\Support\SuppressionList;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -51,6 +57,67 @@ final class CompanyController extends Controller
                 'country' => Company::query()->distinct()->orderBy('country')->pluck('country')->filter()->values()->all(),
             ],
         ]);
+    }
+
+    public function show(Company $company, CompanyDetailQuery $query): Response
+    {
+        return Inertia::render('companies/show', [
+            ...$query->get($company),
+            'options' => [
+                'outreach' => $this->options(OutreachStatus::cases()),
+                'step' => $this->options(array_slice(PipelineStep::cases(), 0, -1)), // every step but `done`
+            ],
+        ]);
+    }
+
+    public function update(UpdateCompanyRequest $request, Company $company, UpdateOutreachStatusAction $outreach): RedirectResponse
+    {
+        if ($request->has('notes')) {
+            $notes = trim((string) $request->input('notes'));
+            $company->update(['notes' => $notes === '' ? null : $notes]);
+            Inertia::flash('toast', ['type' => 'success', 'message' => 'Notes saved']);
+        }
+
+        if ($request->filled('outreach_status')) {
+            $status = OutreachStatus::from($request->string('outreach_status')->toString());
+            $outreach->run($company, $status);
+            Inertia::flash('toast', ['type' => 'success', 'message' => 'Outreach status: '.Str::of($status->value)->replace('_', ' ')]);
+        }
+
+        return back();
+    }
+
+    public function retry(Request $request, Company $company, RetryPipelineStepAction $retry): RedirectResponse
+    {
+        $validated = $request->validate([
+            'step' => ['nullable', Rule::enum(PipelineStep::class)->except([PipelineStep::Done])],
+        ]);
+
+        if (! $retry->canRetry($company)) {
+            Inertia::flash('toast', ['type' => 'warning', 'message' => 'Only rejected or errored leads can be retried']);
+
+            return back();
+        }
+
+        $step = isset($validated['step']) ? PipelineStep::from((string) $validated['step']) : $company->pipeline_step;
+        $retry->run($company, $step);
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Sent back into the pipeline from '.Str::of($step->value)->replace('_', ' ')]);
+
+        return back();
+    }
+
+    public function reverify(Company $company, EmailAddress $emailAddress, SuppressionList $suppressions): RedirectResponse
+    {
+        if ($suppressions->isSuppressed($company)) {
+            Inertia::flash('toast', ['type' => 'warning', 'message' => 'This lead is on the do-not-contact list — no credit spent']);
+
+            return back();
+        }
+
+        ReverifyEmailJob::dispatch($emailAddress->id);
+        Inertia::flash('toast', ['type' => 'success', 'message' => "Re-verifying {$emailAddress->email} — refresh in a minute"]);
+
+        return back();
     }
 
     public function bulk(
