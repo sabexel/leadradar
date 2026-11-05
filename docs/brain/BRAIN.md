@@ -7,17 +7,16 @@
 
 ## Current status
 
-- **Phase:** P2 (dashboard) in progress
-- **Last completed task:** P2.6 Runs & API usage page; Settings page with key status + test connection
-- **Working on:** P2.7
+- **Phase:** P2 complete — P3 (deploy) next
+- **Last completed task:** P2.7 Imports page (company lists + suppression import with column mapping)
+- **Working on:** P3.1
 - **Blocked by:** — (building with faked APIs; owner is registering API keys)
 
 ## Next step
 
-1. **P2.7** — Imports page (`/imports`, docs/07 §4): (a) upload a CSV or paste a list of company names / domains → Companies with signal source `import`, then into the pipeline (`AdvanceLeadPipelineAction`; dedupe with `CompanyMatcher`; suppression checked first); (b) suppression import: upload the outreach sheet CSV → column-mapping UI (pick website / email / company-number columns, auto-detected by default) → `ImportContactedCsvAction`. Uploaded files are processed and deleted, never kept (docs/09). Sidebar "Imports". Feature tests + manual browser check. P2 is then complete.
-2. Owner: put API keys in `.env`; then use Settings → "Test connection" for each service (one cheap call each) to confirm Reed JSON keys (D23), Adzuna limits (D31), CH search, Brave quota, MillionVerifier (D67). Then a first real run: `php artisan leadradar:import-contacted <your sheet export>.csv` (keep the file out of the repo) and Runs → "Run discovery now" with `php artisan queue:work`.
+1. **P3.1** — Hostinger deploy per docs/08: `.github/workflows/deploy.yml` (build assets in CI, rsync/SSH to Hostinger, `composer install --no-dev`, `php artisan migrate --force`, config/route/view cache), the single cron line for `schedule:run`, queue via the scheduler (already in `routes/console.php`), first production run. **Needs the owner first:** Hostinger plan type (shared/cloud vs VPS, open question) and PHP 8.4+ available (D30); SSH host/user/port and a deploy key added as GitHub Actions secrets (never in the repo); production `.env` created on the server by hand; the domain/subdomain to serve from. Read docs/08 before starting.
+2. Owner: put API keys in `.env`; then Settings → "Test connection" for each service to confirm Reed JSON keys (D23), Adzuna limits (D31), CH search, Brave quota, MillionVerifier (D67). Then a first real run: Imports → suppression import with your outreach sheet, and Runs → "Run discovery now" with `php artisan queue:work`.
 3. Owner: publish https://webwayout.co.uk/bot (crawler UA points there, docs/09).
-4. Confirm the Hostinger plan offers PHP 8.4+ (D30).
 
 ---
 
@@ -56,7 +55,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 - [x] P2.4 Mark contacted / replied / not interested (outreach status)
 - [x] P2.5 CSV export in the outreach-sheet column order
 - [x] P2.6 Runs & API usage page; Settings page (caps, target, key status)
-- [ ] P2.7 Manual import: paste domains or upload CSV (e.g. Apollo export) → enrich
+- [x] P2.7 Manual import: paste domains or upload CSV (e.g. Apollo export) → enrich
 
 ### P3 — Deploy
 - [ ] P3.1 Hostinger deploy (GitHub Actions → SSH/rsync), cron, queue via scheduler
@@ -170,6 +169,8 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 | D94 | 2026-11-05 | LeadRadar settings live at `/configuration` (sidebar "Settings"); `/settings/*` stays the starter kit's account pages (profile, security, appearance). Runs at `/runs` | Avoid clashing with the starter kit's routes and layout |
 | D95 | 2026-11-05 | "Test connection" (`App\Services\Support\ConnectionTester`) runs synchronously from the Settings page — ONE call through the normal service (rate limit, caps, `api_usages` log): CH search for "Companies House" (1 item), Reed/Adzuna search "laravel" (1 result), MillionVerifier `/credits` (free; also refreshes the dashboard balance, D86), Brave website search for "Companies House" (1 query). No call when a key is missing. Error text is redacted of the key values and cut to 300 chars. Throttled to 10/min. Key status = every config key for the service is filled; values are never sent to the page | docs/07 §6 wants an immediate answer; a single sync call is seconds, like the services' own timeouts |
 | D96 | 2026-11-05 | Runs page: runs paginated 20/page; API usage = last 14 London days × every service (calls · cost units · errors, errors = no status or ≥ 400); failed jobs = newest 50 from `failed_jobs` (job class, queue, first exception line) with Retry (`queue:retry {uuid}`) and Remove (`queue:forget`); "Run discovery now" = `StartDiscoveryRunAction(manual)`, throttled to 6/min, with the skipped reasons in the toast. Settings form: target 1–500, threshold 0–10, signal age 1–90 days, 1–20 keywords (lower-cased, de-duplicated), 1–10 two-letter countries, caps ≥ 0 (CH ≤ 600 per 5 min, pages per company 1–20) | docs/07 §5–6 |
+| D97 | 2026-11-05 | Company import (`ImportCompaniesAction`, `/imports`): pasted lines are a name, a domain/URL, or "Name, domain" (last comma or a tab); CSV columns detected from headers (name: company name / company / account name / organisation / business name / name, not first/last/founder/contact names; website: website / domain / url, not signal/LinkedIn/job links) or chosen in the UI. A domain-only entry gets a name from its first label ("example-digital.co.uk" → "Example Digital") for the registry search. Skipped: same domain or normalised name already in LeadRadar, repeats within the list, suppressed domains, unreadable lines. Each new company gets one `import` signal (title "Imported") and a timeline event, then `AdvanceLeadPipelineAction` (a known website skips the Brave search). Max 500 rows per import; same per-name lock as job-ad ingest | docs/07 §4; import signals never earn job-ad points (D-scoring counts only Reed/Adzuna ads) |
+| D98 | 2026-11-05 | Uploads are never stored: `POST /imports/preview` reads the temporary upload, returns headers + detected columns as JSON (fetch with the XSRF cookie) and PHP discards the file; the import POST sends the same file again with the chosen columns. `CsvReader` (support service) now reads every CSV (`,`/`;`, BOM, blank rows) for both importers; `ImportContactedCsvAction::preview()` exposes its detection. Suppression import from the page: tick website / email / company-number columns per header, pick a reason (default already_contacted). Files ≤ 5 MB, csv/txt only | docs/09 (no prospect data kept), docs/07 §4 column mapping |
 
 ## Open questions
 

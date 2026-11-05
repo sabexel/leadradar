@@ -4,6 +4,7 @@ import {
     FolderGit2,
     LayoutGrid,
     SlidersHorizontal,
+    Upload,
     Users,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
@@ -22,6 +23,7 @@ import {
 import { dashboard } from '@/routes';
 import { index as companies } from '@/routes/companies';
 import { edit as configuration } from '@/routes/configuration';
+import { index as imports } from '@/routes/imports';
 import { index as runs } from '@/routes/runs';
 import type { NavItem } from '@/types';
 
@@ -35,6 +37,11 @@ const mainNavItems: NavItem[] = [
         title: 'Leads',
         href: companies(),
         icon: Users,
+    },
+    {
+        title: 'Imports',
+        href: imports(),
+        icon: Upload,
     },
     {
         title: 'Runs',

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ImportController;
 use App\Http\Controllers\PipelineSettingsController;
 use App\Http\Controllers\RunController;
 use Illuminate\Support\Facades\Route;
@@ -19,6 +20,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('companies/{company}/emails/{emailAddress}/reverify', [CompanyController::class, 'reverify'])
         ->scopeBindings()
         ->name('companies.emails.reverify');
+
+    Route::get('imports', [ImportController::class, 'index'])->name('imports.index');
+    Route::post('imports/preview', [ImportController::class, 'preview'])->name('imports.preview');
+    Route::post('imports/companies', [ImportController::class, 'companies'])->name('imports.companies');
+    Route::post('imports/suppressions', [ImportController::class, 'suppressions'])->name('imports.suppressions');
 
     Route::get('runs', [RunController::class, 'index'])->name('runs.index');
     Route::post('runs/discover', [RunController::class, 'discover'])->middleware('throttle:6,1')->name('runs.discover');

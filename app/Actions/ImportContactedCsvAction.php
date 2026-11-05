@@ -14,11 +14,11 @@ use App\Enums\SuppressionType;
 use App\Models\Company;
 use App\Models\Suppression;
 use App\Services\Dedupe\CompanyMatcher;
+use App\Services\Support\CsvReader;
 use App\Services\Support\SuppressionList;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
-use SplFileObject;
 
 /**
  * Local, sync: turn the owner's outreach sheet (CSV export) into suppressions, so nobody already contacted is
@@ -40,6 +40,7 @@ final class ImportContactedCsvAction
     public function __construct(
         private readonly CompanyMatcher $matcher,
         private readonly SuppressionList $suppressions,
+        private readonly CsvReader $csv,
     ) {}
 
     /**
@@ -48,7 +49,7 @@ final class ImportContactedCsvAction
      */
     public function run(string $path, ?array $mapping = null, SuppressionReason $reason = SuppressionReason::AlreadyContacted): SuppressionImportResult
     {
-        [$headers, $rows] = $this->read($path);
+        [$headers, $rows] = $this->csv->read($path);
         $columns = $this->columns($headers, $mapping);
 
         $values = ['domain' => [], 'email' => [], 'company_number' => []];
@@ -114,6 +115,32 @@ final class ImportContactedCsvAction
     }
 
     /**
+     * For the column-mapping UI (docs/07 §4): the file's headers and the columns detection would use.
+     *
+     * @return array{headers: list<string>, rows: int, detected: array{website: list<string>, email: list<string>, company_number: list<string>}}
+     */
+    public function preview(string $path): array
+    {
+        [$headers, $rows] = $this->csv->read($path);
+
+        try {
+            $columns = $this->columns($headers, null);
+        } catch (InvalidArgumentException) {
+            $columns = ['website' => [], 'email' => [], 'company_number' => []];
+        }
+
+        return [
+            'headers' => $headers,
+            'rows' => count($rows),
+            'detected' => [
+                'website' => array_map(fn (int $i): string => $headers[$i], $columns['website']),
+                'email' => array_map(fn (int $i): string => $headers[$i], $columns['email']),
+                'company_number' => array_map(fn (int $i): string => $headers[$i], $columns['company_number']),
+            ],
+        ];
+    }
+
+    /**
      * Leads already in LeadRadar that are now on the list stop where they are.
      */
     private function suppressExistingLeads(SuppressionReason $reason): int
@@ -142,51 +169,6 @@ final class ImportContactedCsvAction
             });
 
         return $count;
-    }
-
-    /**
-     * @return array{0: list<string>, 1: list<list<string>>} headers, data rows
-     */
-    private function read(string $path): array
-    {
-        if (! is_readable($path)) {
-            throw new InvalidArgumentException("Cannot read {$path}");
-        }
-
-        $file = new SplFileObject($path);
-        $firstLine = (string) $file->fgets();
-        $delimiter = substr_count($firstLine, ';') > substr_count($firstLine, ',') ? ';' : ',';
-        $file->rewind();
-        $file->setFlags(SplFileObject::READ_CSV | SplFileObject::SKIP_EMPTY | SplFileObject::READ_AHEAD);
-        $file->setCsvControl($delimiter, '"', '\\');
-
-        $headers = null;
-        $rows = [];
-
-        foreach ($file as $line) {
-            if (! is_array($line) || $line === [null]) {
-                continue;
-            }
-
-            $line = array_values(array_map(fn (mixed $cell): string => trim((string) $cell), $line));
-
-            if ($headers === null) {
-                $line[0] = (string) preg_replace('/^\x{FEFF}/u', '', $line[0]); // Excel's UTF-8 BOM
-                $headers = $line;
-
-                continue;
-            }
-
-            if (implode('', $line) !== '') {
-                $rows[] = $line;
-            }
-        }
-
-        if ($headers === null) {
-            throw new InvalidArgumentException('The CSV file is empty.');
-        }
-
-        return [$headers, $rows];
     }
 
     /**

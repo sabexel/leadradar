@@ -404,3 +404,22 @@
   the test button disabled. Local test run removed and target reset to 50 afterwards.
 - Decisions: D94–D96.
 - Notes / follow-ups: on `php artisan serve` a POST takes ~1 s, so buttons stay busy briefly.
+
+## 2026-11-05 — P2.7 Imports page (P2 complete)
+- Done: `ImportCompaniesAction` (+ DTO `CompanyImportResult`), `App\Services\Support\CsvReader` (extracted from
+  `ImportContactedCsvAction`, which also gained `preview()`), `ImportController` (index, preview JSON, companies,
+  suppressions). Routes `imports.*`. React page `pages/imports/index.tsx`: company import (paste or CSV with column
+  selects) and suppression import (CSV → per-column website/email/company-number ticks, reason). Sidebar "Imports".
+  Fixture `tests/Fixtures/imports/apollo-export.csv` (invented).
+- Tests: `tests/Feature/Imports/ImportsPageTest.php` (8): page + guests; pasted names / URLs / "Name, domain" →
+  companies with an import signal in the pipeline (CH search queued); skips known-by-domain, known-by-name, repeats,
+  suppressed, unreadable with the summary toast; CSV preview JSON + import with chosen columns; empty / unknown
+  column / >500 refused; suppression preview (detected columns, none found, bad type); suppression import with chosen
+  columns + reason stops a matching lead; auto-detection, bad reason, unusable file. Existing importer tests still
+  pass after the refactor. 556 passing; Pint, Larastan, vp check, tsc, vp build clean.
+  Manual browser check: preview endpoint called from the page with an in-memory CSV (200, columns detected — proves
+  the XSRF header path); pasted one invented company → "1 new company sent into the pipeline"; no console errors.
+  The test company, its signal and its queued job were removed afterwards. (The built-in browser cannot pick a
+  file, so the file-input UI itself was only covered by the tests.)
+- Decisions: D97–D98.
+- Notes / follow-ups: P2 is complete. P3.1 needs owner input first (hosting plan, SSH secrets, domain).
