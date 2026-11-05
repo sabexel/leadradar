@@ -1,5 +1,11 @@
 import { Link } from '@inertiajs/react';
-import { FolderGit2, LayoutGrid, Users } from 'lucide-react';
+import {
+    Activity,
+    FolderGit2,
+    LayoutGrid,
+    SlidersHorizontal,
+    Users,
+} from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -15,6 +21,8 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { index as companies } from '@/routes/companies';
+import { edit as configuration } from '@/routes/configuration';
+import { index as runs } from '@/routes/runs';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -27,6 +35,16 @@ const mainNavItems: NavItem[] = [
         title: 'Leads',
         href: companies(),
         icon: Users,
+    },
+    {
+        title: 'Runs',
+        href: runs(),
+        icon: Activity,
+    },
+    {
+        title: 'Settings',
+        href: configuration(),
+        icon: SlidersHorizontal,
     },
 ];
 

@@ -8,14 +8,14 @@
 ## Current status
 
 - **Phase:** P2 (dashboard) in progress
-- **Last completed task:** P2.5 CSV export in the outreach-sheet column order
-- **Working on:** P2.6
+- **Last completed task:** P2.6 Runs & API usage page; Settings page with key status + test connection
+- **Working on:** P2.7
 - **Blocked by:** — (building with faked APIs; owner is registering API keys)
 
 ## Next step
 
-1. **P2.6** — Runs page (`/runs`, docs/07 §5): `scrape_runs` table, per-service API usage per day (calls, cost units, errors), failed jobs list with retry, "Run discovery now" button (runs the same action as `leadradar:discover --manual`). Settings page (`/settings` — note the starter kit already uses `/settings/*` for profile/security; pick a non-clashing path such as `/app-settings` or nest under settings) per §6: daily target, qualify threshold, per-service caps, keywords, countries, signal max age; key status per service configured/missing (never show values) + "Test connection" (one cheap logged call per service, e.g. `MillionVerifierService::credits()`, D86). Sidebar entries. Feature tests + manual browser check.
-2. Owner: put API keys in `.env`; one live call each to confirm Reed JSON keys (D23), Adzuna limits (D31), CH search, Brave query + quota, MillionVerifier result values (D67). Then a first real run: `php artisan leadradar:import-contacted <your sheet export>.csv` (keep the file out of the repo) and `php artisan leadradar:discover --manual` with `php artisan queue:work`.
+1. **P2.7** — Imports page (`/imports`, docs/07 §4): (a) upload a CSV or paste a list of company names / domains → Companies with signal source `import`, then into the pipeline (`AdvanceLeadPipelineAction`; dedupe with `CompanyMatcher`; suppression checked first); (b) suppression import: upload the outreach sheet CSV → column-mapping UI (pick website / email / company-number columns, auto-detected by default) → `ImportContactedCsvAction`. Uploaded files are processed and deleted, never kept (docs/09). Sidebar "Imports". Feature tests + manual browser check. P2 is then complete.
+2. Owner: put API keys in `.env`; then use Settings → "Test connection" for each service (one cheap call each) to confirm Reed JSON keys (D23), Adzuna limits (D31), CH search, Brave quota, MillionVerifier (D67). Then a first real run: `php artisan leadradar:import-contacted <your sheet export>.csv` (keep the file out of the repo) and Runs → "Run discovery now" with `php artisan queue:work`.
 3. Owner: publish https://webwayout.co.uk/bot (crawler UA points there, docs/09).
 4. Confirm the Hostinger plan offers PHP 8.4+ (D30).
 
@@ -55,7 +55,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 - [x] P2.3 Company detail: all fields, founders, emails + verification, score breakdown, timeline
 - [x] P2.4 Mark contacted / replied / not interested (outreach status)
 - [x] P2.5 CSV export in the outreach-sheet column order
-- [ ] P2.6 Runs & API usage page; Settings page (caps, target, key status)
+- [x] P2.6 Runs & API usage page; Settings page (caps, target, key status)
 - [ ] P2.7 Manual import: paste domains or upload CSV (e.g. Apollo export) → enrich
 
 ### P3 — Deploy
@@ -167,6 +167,9 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 | D91 | 2026-11-05 | Lead page (`/companies/{id}`, `CompanyDetailQuery`): Companies House link = `find-and-update.company-information.service.gov.uk/company/{number}` (only when `registry = companies_house`); registered address rendered in postal order server-side (MySQL JSON loses key order); founder "candidates tried" = every address tied to that person; Retry is offered on the last failed/rejected timeline event and as "Re-run from step" when `RetryPipelineStepAction::canRetry`. Notes: trimmed, empty → null, max 10 000 chars. P2.4 is covered here: the header outreach selector uses `UpdateOutreachStatusAction` (D89), not interested asks to confirm | docs/07 §3, docs/10 P2.4 |
 | D92 | 2026-11-05 | "Re-verify" = `ReverifyEmailJob` (queue `verify`, ONE MillionVerifier call, always spends a credit, MV rate limit + daily cap via `InteractsWithServiceLimits`, nothing sent for a suppressed company/address — checked in the controller and again in the job). `ApplyReverificationAction` stores the result, logs a timeline event, re-picks the founder's best address (`ApplyVerificationResultAction::bestFor`, extracted from `finish()`), and rescores leads the pipeline has finished with (qualified, or rejected below_threshold / no_valid_email) via `QualifyCompanyAction`. A failed re-verify only adds a timeline event — the lead's status is untouched (unlike pipeline jobs) | The button is outside the pipeline, so it must not set `error` or move `pipeline_step` |
 | D93 | 2026-11-05 | CSV export (`ExportCompaniesCsvAction`, `GET /companies/export`): exactly the docs/07 header; rows in the table's filter + sort order (`CompanyIndexQuery::query()`), or only `ids[]` (max 500) for "Export selected"; S.no counts the export rows. Company number as `="07172996"`; Signal = newest job ad title + URL; founder email = the person's chosen address. `email test`: ok → Verified, catch_all → Catch-all, invalid/disposable → Invalid, unknown/error → Unknown, unverified generated → Generated, unverified crawled → Unknown. UTF-8 BOM for Excel. Cells from scraped text starting with `= + - @` (or tab/CR) get a leading `'` (CSV injection); the company-number formula is the only one written on purpose. Streamed, never stored; file name `leadradar-leads-YYYY-MM-DD-HHmm.csv` (London time). An export round-trips through `leadradar:import-contacted` | docs/07 "Export format", docs/09 (no exports kept) |
+| D94 | 2026-11-05 | LeadRadar settings live at `/configuration` (sidebar "Settings"); `/settings/*` stays the starter kit's account pages (profile, security, appearance). Runs at `/runs` | Avoid clashing with the starter kit's routes and layout |
+| D95 | 2026-11-05 | "Test connection" (`App\Services\Support\ConnectionTester`) runs synchronously from the Settings page — ONE call through the normal service (rate limit, caps, `api_usages` log): CH search for "Companies House" (1 item), Reed/Adzuna search "laravel" (1 result), MillionVerifier `/credits` (free; also refreshes the dashboard balance, D86), Brave website search for "Companies House" (1 query). No call when a key is missing. Error text is redacted of the key values and cut to 300 chars. Throttled to 10/min. Key status = every config key for the service is filled; values are never sent to the page | docs/07 §6 wants an immediate answer; a single sync call is seconds, like the services' own timeouts |
+| D96 | 2026-11-05 | Runs page: runs paginated 20/page; API usage = last 14 London days × every service (calls · cost units · errors, errors = no status or ≥ 400); failed jobs = newest 50 from `failed_jobs` (job class, queue, first exception line) with Retry (`queue:retry {uuid}`) and Remove (`queue:forget`); "Run discovery now" = `StartDiscoveryRunAction(manual)`, throttled to 6/min, with the skipped reasons in the toast. Settings form: target 1–500, threshold 0–10, signal age 1–90 days, 1–20 keywords (lower-cased, de-duplicated), 1–10 two-letter countries, caps ≥ 0 (CH ≤ 600 per 5 min, pages per company 1–20) | docs/07 §5–6 |
 
 ## Open questions
 

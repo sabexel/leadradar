@@ -385,3 +385,22 @@
   8 demo rows (fetched in the page, nothing saved to disk); "Export selected" link present in the bulk bar.
 - Decisions: D93.
 - Notes / follow-ups: none.
+
+## 2026-11-05 — P2.6 Runs & API usage page; Settings page
+- Done: `RunController` (index, discover, retryFailed, forgetFailed) + `App\Queries\RunsQuery`;
+  `PipelineSettingsController` (edit, update, test) + `UpdatePipelineSettingsRequest`;
+  `App\Services\Support\ConnectionTester`. Routes `runs.*`, `configuration.*`. React pages `pages/runs/index.tsx`
+  (runs table, 14-day usage grid, failed jobs with Retry/Remove, "Run discovery now") and
+  `pages/configuration/edit.tsx` (targets, search keywords/countries, caps, key status + Test connection). Sidebar:
+  Runs, Settings.
+- Tests: `tests/Feature/Runs/RunsPageTest.php` (6) and `tests/Feature/Settings/PipelineSettingsTest.php` (14):
+  guests; runs pagination; usage grid per day/service with errors and the 14-day window; failed job listed, retried,
+  removed, 404s; discovery now (manual run, Reed job queued, no second concurrent run, skipped reasons); settings
+  shown with key status and no key values in the response; cleaned save; 7 out-of-range cases; MV test (1 call,
+  logged, balance stored); CH test; failing Brave test without the key in the message; missing key / unknown service
+  make no call. 548 passing; Pint, Larastan, vp check, tsc, vp build clean.
+  Manual browser check (no API keys in local `.env`, so nothing external): Runs page, "Run discovery now" → run
+  marked failed "nothing to search"; Settings page, browser min/max check, save toast; key rows show "Missing" with
+  the test button disabled. Local test run removed and target reset to 50 afterwards.
+- Decisions: D94–D96.
+- Notes / follow-ups: on `php artisan serve` a POST takes ~1 s, so buttons stay busy briefly.
