@@ -10,6 +10,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
     Route::get('companies', [CompanyController::class, 'index'])->name('companies.index');
     Route::post('companies/bulk', [CompanyController::class, 'bulk'])->name('companies.bulk');
+    Route::get('companies/export', [CompanyController::class, 'export'])->name('companies.export');
     Route::get('companies/{company}', [CompanyController::class, 'show'])->name('companies.show');
     Route::patch('companies/{company}', [CompanyController::class, 'update'])->name('companies.update');
     Route::post('companies/{company}/retry', [CompanyController::class, 'retry'])->name('companies.retry');

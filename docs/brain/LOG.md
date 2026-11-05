@@ -370,3 +370,18 @@
 - Notes / follow-ups: `app/Queries/CompanyIndexQuery.php` from P2.2 had Pint issues (missed locally) — fixed in this
   commit; check that CI for c367415 failed only on that. Demo seed leads have a score but no stored breakdown —
   the page says so.
+
+## 2026-11-05 — P2.5 CSV export
+- Done: `ExportCompaniesCsvAction` (header constant, row mapping, email-test mapping, formula neutralising, BOM,
+  streams with `lazy(200)` in query order), `CompanyController@export` + route `companies.export` (filters from the
+  query string or `ids[]`). Leads page: "Export CSV" (current filters) in the filter bar and "Export selected" in
+  the bulk bar — plain download links.
+- Tests: `tests/Feature/Companies/CompanyExportTest.php` (14): exact header + a full row (text company number,
+  newest signal, founder 2 guess → Generated); every verification result → email test value (8 cases); filters,
+  sort and selected ids respected, S.no follows the export; empty row; formula injection neutralised; an export
+  round-trips into the suppression importer; oversized selection and guests refused. 528 passing; Pint, Larastan,
+  vp check, tsc, vp build clean.
+  Manual browser check: "Export CSV" on a status-filtered table returns 200 with the right file name, header and
+  8 demo rows (fetched in the page, nothing saved to disk); "Export selected" link present in the bulk bar.
+- Decisions: D93.
+- Notes / follow-ups: none.

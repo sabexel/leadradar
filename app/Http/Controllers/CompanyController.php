@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\ExportCompaniesCsvAction;
 use App\Actions\RetryPipelineStepAction;
 use App\Actions\SuppressCompanyAction;
 use App\Actions\UpdateOutreachStatusAction;
@@ -27,6 +28,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class CompanyController extends Controller
 {
@@ -118,6 +120,37 @@ final class CompanyController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => "Re-verifying {$emailAddress->email} — refresh in a minute"]);
 
         return back();
+    }
+
+    /**
+     * CSV in the outreach-sheet order: the selected rows (`ids[]`), or every lead matching the table's filters.
+     */
+    public function export(Request $request, CompanyIndexQuery $query, ExportCompaniesCsvAction $export): StreamedResponse
+    {
+        $validated = $request->validate([
+            'ids' => ['sometimes', 'array', 'max:500'],
+            'ids.*' => ['integer'],
+        ]);
+
+        $companies = $query->query($query->filters($request));
+
+        if (isset($validated['ids'])) {
+            $companies->whereIn('id', array_map('intval', $validated['ids']));
+        }
+
+        $filename = 'leadradar-leads-'.now((string) config('leadradar.timezone', 'Europe/London'))->format('Y-m-d-Hi').'.csv';
+
+        return response()->streamDownload(function () use ($companies, $export): void {
+            $handle = fopen('php://output', 'w');
+
+            if ($handle !== false) {
+                $export->write($companies, $handle);
+                fclose($handle);
+            }
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Cache-Control' => 'no-store',
+        ]);
     }
 
     public function bulk(

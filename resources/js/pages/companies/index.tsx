@@ -2,6 +2,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import {
     ArrowDown,
     ArrowUp,
+    Download,
     ChevronDown,
     ExternalLink,
     Linkedin,
@@ -46,7 +47,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { bulk, index, show } from '@/routes/companies';
+import { bulk, exportMethod, index, show } from '@/routes/companies';
 import type {
     CompaniesIndexProps,
     CompanyFilters,
@@ -404,6 +405,12 @@ function FilterBar({
                         <X className="size-4" /> Clear
                     </Button>
                 )}
+
+                <Button variant="outline" size="sm" className="ml-auto" asChild>
+                    <a href={exportMethod.url({ query: toQuery(filters) })}>
+                        <Download className="size-4" /> Export CSV
+                    </a>
+                </Button>
             </div>
 
             <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
@@ -853,6 +860,11 @@ function BulkBar({
                     </DropdownMenuSub>
                 </DropdownMenuContent>
             </DropdownMenu>
+            <Button size="sm" variant="outline" asChild>
+                <a href={exportMethod.url({ query: { ids } })}>
+                    <Download className="size-4" /> Export selected
+                </a>
+            </Button>
             <Button size="sm" variant="ghost" onClick={onDone}>
                 Clear selection
             </Button>
