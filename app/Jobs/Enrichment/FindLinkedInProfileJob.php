@@ -58,6 +58,10 @@ final class FindLinkedInProfileJob implements ShouldBeUnique, ShouldQueue
             return;
         }
 
+        if ($this->stopIfSuppressed($company, $advance)) {
+            return;
+        }
+
         // Already handled (e.g. a retry of this job) → no second query.
         if ($linkedIn->nextPerson($company)?->id === $person->id) {
             $companyName = $linkedIn->companyQueryName($company);

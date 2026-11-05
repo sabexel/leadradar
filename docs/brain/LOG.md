@@ -293,3 +293,19 @@
   qualified_at kept; schedule expressions/timezone/options. 475 passing; Pint, Larastan, vp check, tsc clean.
 - Decisions: D78–D81.
 - Notes / follow-ups: on Hostinger this needs the single cron line from docs/08 (`schedule:run` every minute).
+
+## 2026-11-05 — P1.14 Suppression import + checks before paid calls (P1 complete)
+- Done: DTO `SuppressionImportResult`; `ImportContactedCsvAction` (header detection or explicit mapping,
+  spreadsheet clean-up, domains/emails/company numbers → `suppressions`, existing leads suppressed);
+  `leadradar:import-contacted` command; `FailsCompanyStep::stopIfSuppressed()` used by `FindCompanyWebsiteJob`,
+  `VerifyEmailJob`, `FindLinkedInProfileJob` before their paid call. (Ingest/pipeline suppression gates came in
+  P1.3–P1.6.)
+- Tests: `tests/Feature/Imports/ImportContactedCsvTest.php` (10): the invented sheet export suppresses every
+  domain, email and company number in it (BOM, `="…"`, lost zero, SC number, two emails in a cell, blank rows,
+  duplicate row); job-board/LinkedIn/free-mail domains never suppressed; idempotent; semicolon file + explicit
+  mapping; no usable column / unknown mapped column refused; existing leads suppressed + marked contacted;
+  command with reason + failures; no Brave / MillionVerifier call for a company suppressed after queueing.
+  Fixtures `tests/Fixtures/imports/`. 485 passing; Pint, Larastan, vp check, tsc clean.
+- Decisions: D82–D84.
+- Notes / follow-ups: Docker Desktop had stopped (tests could not reach MySQL on 3317) — started it again; the
+  `leadradar-mysql` volume was intact. P1 is complete; P2 (dashboard) is next.

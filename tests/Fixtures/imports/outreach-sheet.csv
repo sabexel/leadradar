@@ -1,0 +1,7 @@
+﻿S.no,Company Name,Website,Location,Company House no,Company contact email,Company careers email,Founder 1 First Name,Founder 1 Last Name,Founder 1 LinkedIn,Founder 1 email,Founder 1 email test,Founder 2 First Name,Founder 2 Last Name,Founder 2 LinkedIn,Founder 2 email,Founder 2 email test,Score,Company type,Signal,Signal URL
+1,Example Digital Ltd,https://www.Example-Digital.test/,Manchester,"=""01234567""",hello@example-digital.test,careers@example-digital.test,Jane,Example,https://www.linkedin.com/in/jane-example,jane@example-digital.test,Verified,John,Sample,,john.sample@example-digital.test,Catch-all,9.5,agency,Laravel Developer,https://www.reed.co.uk/jobs/laravel-developer/50000001
+2,Sample Software Studio Ltd,sample-software.test,Leeds,7172996,,,Pat,Sample,,pat.founder@gmail.com,Verified,,,,,,7.0,direct_client,Senior Laravel Engineer,https://www.adzuna.co.uk/jobs/land/ad/1
+
+3,Demo Web Labs Ltd,,Bristol,SC123456,info@demo-web-labs.test; sales@demo-web-labs.test,,Alex,Demo,,,,,,,,,6.1,agency,Laravel Dev,
+4,Example Digital Ltd (duplicate row),example-digital.test,Manchester,01234567,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,

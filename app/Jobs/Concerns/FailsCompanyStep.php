@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Jobs\Concerns;
 
+use App\Actions\AdvanceLeadPipelineAction;
 use App\Enums\LeadStatus;
 use App\Enums\PipelineOutcome;
 use App\Enums\PipelineStep;
 use App\Models\Company;
+use App\Services\Support\SuppressionList;
 use Throwable;
 
 /**
@@ -17,6 +19,21 @@ use Throwable;
 trait FailsCompanyStep
 {
     abstract protected function step(): PipelineStep;
+
+    /**
+     * Last check before spending money: the company may have been suppressed (e.g. by an import) after this
+     * job was queued. If so, the pipeline marks it suppressed and the job makes no call.
+     */
+    protected function stopIfSuppressed(Company $company, AdvanceLeadPipelineAction $advance): bool
+    {
+        if (! app(SuppressionList::class)->isSuppressed($company)) {
+            return false;
+        }
+
+        $advance->run($company);
+
+        return true;
+    }
 
     public function failed(?Throwable $exception): void
     {

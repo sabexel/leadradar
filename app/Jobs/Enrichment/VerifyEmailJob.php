@@ -62,6 +62,10 @@ final class VerifyEmailJob implements ShouldBeUnique, ShouldQueue
             return;
         }
 
+        if ($this->stopIfSuppressed($company, $advance)) {
+            return;
+        }
+
         // Verified recently (e.g. a retry of this job) → no second credit.
         if ($planner->needsVerification($email)) {
             [$called, $result] = $this->withinServiceLimits(fn (): EmailVerificationResult => $verifier->verify($email->email));

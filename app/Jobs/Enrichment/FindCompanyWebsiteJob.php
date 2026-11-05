@@ -56,6 +56,10 @@ final class FindCompanyWebsiteJob implements ShouldBeUnique, ShouldQueue
             return;
         }
 
+        if ($this->stopIfSuppressed($company, $advance)) {
+            return;
+        }
+
         $name = $company->legal_name ?? $company->name;
         $town = trim(explode(',', (string) ($company->location ?? ($company->registered_address['locality'] ?? '')))[0]);
 

@@ -7,15 +7,15 @@
 
 ## Current status
 
-- **Phase:** P1 — in progress
-- **Last completed task:** P1.13 Scheduler + discover / close-runs / rescore commands
-- **Working on:** P1.14
+- **Phase:** P1 complete — P2 (dashboard) next
+- **Last completed task:** P1.14 Suppression CSV import + checks before paid calls
+- **Working on:** P2.1
 - **Blocked by:** — (building with faked APIs; owner is registering API keys)
 
 ## Next step
 
-1. **P1.14** — suppression: `SuppressionList` checks already run in the pipeline before every paid step (domain, company number, emails); add `ImportContactedCsvAction` (owner's outreach-sheet export → `suppressions` with reason `already_contacted`: domains from website/email columns, emails, company numbers; lowercase, dedupe, report counts) + an artisan command `leadradar:import-contacted {file}` for now (the upload UI is P2.7). Acceptance: importing the owner's sheet export suppresses every domain in it. Use an invented CSV fixture only — never the real sheet.
-2. Owner: put API keys in `.env`; one live call each to confirm Reed JSON keys (D23), Adzuna limits (D31), CH search, Brave query + quota, MillionVerifier result values (D67).
+1. **P2.1** — Dashboard page per docs/07 §1 (counters, charts via shadcn charts/Recharts, last runs), as an Inertia page behind auth. Read docs/07 first; feature test with Inertia assertions + a manual browser check.
+2. Owner: put API keys in `.env`; one live call each to confirm Reed JSON keys (D23), Adzuna limits (D31), CH search, Brave query + quota, MillionVerifier result values (D67). Then a first real run: `php artisan leadradar:import-contacted <your sheet export>.csv` (keep the file out of the repo) and `php artisan leadradar:discover --manual` with `php artisan queue:work`.
 3. Owner: publish https://webwayout.co.uk/bot (crawler UA points there, docs/09).
 4. Confirm the Hostinger plan offers PHP 8.4+ (D30).
 
@@ -47,7 +47,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 - [x] P1.11 `LeadScoringService` + gates (sync) → status `qualified` / `rejected`
 - [x] P1.12 `AdvanceLeadPipelineAction` state machine wiring all steps
 - [x] P1.13 Scheduler: daily discovery run, stops at daily qualified target
-- [ ] P1.14 Suppression list + CSV import of already-contacted companies
+- [x] P1.14 Suppression list + CSV import of already-contacted companies
 
 ### P2 — Dashboard
 - [ ] P2.1 Dashboard page: counters, charts, last runs
@@ -155,6 +155,9 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 | D79 | 2026-11-04 | `leadradar:close-runs` finishes a running run when the `sources`/`registry`/`web`/`verify` queues are all empty, or after 20 hours (jobs released until tomorrow by a cap would otherwise keep it open). `qualified_count` = leads with `qualified_at` ≥ run start; `rejected_count` = rejected leads created since the run started | Enrichment jobs don't carry a run id, so counts are by time window (good enough with one run per day) |
 | D80 | 2026-11-04 | `leadradar:rescore` re-runs `QualifyCompanyAction` for finished (`done`) leads that are qualified **or** near misses (`below_threshold`); hard-gate rejections and unfinished leads are left alone; no jobs | docs/05 said "non-rejected"; near misses must be included or lowering the threshold could never promote them |
 | D81 | 2026-11-04 | `routes/console.php` = exactly the docs/08 schedule (worker every minute with `withoutOverlapping(2)` + `runInBackground`, discover 06:10 London, close-runs every 15 min, prune failed jobs after 168 h, `model:prune` daily). The starter `inspire` command was removed. The worker's `--tries=3` does not override our jobs' `retryUntil()` (D25) | docs/08 |
+| D82 | 2026-11-05 | `ImportContactedCsvAction` (+ `leadradar:import-contacted {file} [--website=*] [--email=*] [--number=*] [--reason=]`): columns auto-detected from the docs/07 sheet headers ("Website"; any "…email" except "…email test"; "Company House no"/company number/reg no) or mapped explicitly; job-board/LinkedIn columns ("Signal URL", "…LinkedIn") are never read as websites. Handles a UTF-8 BOM, `;` delimiters, `="07172996"` cells, lost leading zeros (digits padded to 8), `SC123456`-style numbers, several emails per cell | docs/07 §4; the column-mapping upload UI is P2.7 and will call the same action |
+| D83 | 2026-11-05 | An email's domain also becomes a domain suppression unless it is free mail (gmail, outlook, hotmail, yahoo, icloud, btinternet…); the address itself is always suppressed | "Every domain/email becomes a suppression" without suppressing all of Gmail |
+| D84 | 2026-11-05 | After an import, existing leads matching the list become `suppressed` (event "Suppressed by import"); with reason `already_contacted` their `outreach_status` becomes `contacted`. The Brave and MillionVerifier jobs re-check suppression right before their paid call (`FailsCompanyStep::stopIfSuppressed`) | docs/10 P1.14 "checks before any paid call" — an import can land between queueing and running |
 
 ## Open questions
 
