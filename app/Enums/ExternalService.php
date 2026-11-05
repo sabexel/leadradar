@@ -15,4 +15,16 @@ enum ExternalService: string
     case MillionVerifier = 'millionverifier';
     case Brave = 'brave';
     case Crawler = 'crawler';
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::CompaniesHouse => 'Companies House',
+            self::Reed => 'Reed',
+            self::Adzuna => 'Adzuna',
+            self::MillionVerifier => 'MillionVerifier',
+            self::Brave => 'Brave Search',
+            self::Crawler => 'Website crawler',
+        };
+    }
 }

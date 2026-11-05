@@ -7,14 +7,14 @@
 
 ## Current status
 
-- **Phase:** P1 complete — P2 (dashboard) next
-- **Last completed task:** P1.14 Suppression CSV import + checks before paid calls
-- **Working on:** P2.1
+- **Phase:** P2 (dashboard) in progress
+- **Last completed task:** P2.1 Dashboard page (cards, charts, last runs, API usage)
+- **Working on:** P2.2
 - **Blocked by:** — (building with faked APIs; owner is registering API keys)
 
 ## Next step
 
-1. **P2.1** — Dashboard page per docs/07 §1 (counters, charts via shadcn charts/Recharts, last runs), as an Inertia page behind auth. Read docs/07 first; feature test with Inertia assertions + a manual browser check.
+1. **P2.2** — Leads index (`/companies`) per docs/07 §2: columns, all filters in the URL query string, sort, score badge, bulk actions (mark contacted / not interested, suppress domain, re-run from step, export CSV — export itself is P2.5). Add `app/Queries/CompanyIndexQuery.php` (docs/02) and the sidebar entries (Leads, Imports, Runs, Settings) as each page lands. Feature tests with Inertia assertions + a manual browser check.
 2. Owner: put API keys in `.env`; one live call each to confirm Reed JSON keys (D23), Adzuna limits (D31), CH search, Brave query + quota, MillionVerifier result values (D67). Then a first real run: `php artisan leadradar:import-contacted <your sheet export>.csv` (keep the file out of the repo) and `php artisan leadradar:discover --manual` with `php artisan queue:work`.
 3. Owner: publish https://webwayout.co.uk/bot (crawler UA points there, docs/09).
 4. Confirm the Hostinger plan offers PHP 8.4+ (D30).
@@ -50,7 +50,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 - [x] P1.14 Suppression list + CSV import of already-contacted companies
 
 ### P2 — Dashboard
-- [ ] P2.1 Dashboard page: counters, charts, last runs
+- [x] P2.1 Dashboard page: counters, charts, last runs
 - [ ] P2.2 Companies index: filters, sort, score badge, bulk actions
 - [ ] P2.3 Company detail: all fields, founders, emails + verification, score breakdown, timeline
 - [ ] P2.4 Mark contacted / replied / not interested (outreach status)
@@ -158,6 +158,9 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 | D82 | 2026-11-05 | `ImportContactedCsvAction` (+ `leadradar:import-contacted {file} [--website=*] [--email=*] [--number=*] [--reason=]`): columns auto-detected from the docs/07 sheet headers ("Website"; any "…email" except "…email test"; "Company House no"/company number/reg no) or mapped explicitly; job-board/LinkedIn columns ("Signal URL", "…LinkedIn") are never read as websites. Handles a UTF-8 BOM, `;` delimiters, `="07172996"` cells, lost leading zeros (digits padded to 8), `SC123456`-style numbers, several emails per cell | docs/07 §4; the column-mapping upload UI is P2.7 and will call the same action |
 | D83 | 2026-11-05 | An email's domain also becomes a domain suppression unless it is free mail (gmail, outlook, hotmail, yahoo, icloud, btinternet…); the address itself is always suppressed | "Every domain/email becomes a suppression" without suppressing all of Gmail |
 | D84 | 2026-11-05 | After an import, existing leads matching the list become `suppressed` (event "Suppressed by import"); with reason `already_contacted` their `outreach_status` becomes `contacted`. The Brave and MillionVerifier jobs re-check suppression right before their paid call (`FailsCompanyStep::stopIfSuppressed`) | docs/10 P1.14 "checks before any paid call" — an import can land between queueing and running |
+| D85 | 2026-11-05 | Dashboard counting (`App\Queries\DashboardQuery`): "Qualified", the per-day chart and the average score count by `qualified_at` (same clock as the daily target); Rejected / In progress (discovered + enriching) / Errors, the funnel, reject reasons and the score histogram describe the cohort of companies *created* in the range, by current status; Scraped and the source split count signals created in the range; Contacted/Replied count `contacted_at` in the range (Replied = replied or client). All days are London days; range presets today/7d/30d/custom (max 1 year, swapped if reversed, invalid → today) live in the query string | docs/07 §1 lists the cards but not what each one counts; qualified must match the daily target, and a status snapshot per cohort keeps the funnel consistent |
+| D86 | 2026-11-05 | The MillionVerifier balance on the dashboard is the `credits` value MillionVerifier returns with each verification, stored in setting `millionverifier.credits` (`{credits, at}`) by `ApplyVerificationResultAction` — the dashboard never calls the API. A live balance check (`MillionVerifierService::credits()`) belongs to the Settings "Test connection" button (P2.6) | Controllers make no external calls; the balance comes free with every result |
+| D87 | 2026-11-05 | shadcn `chart` component written from the shadcn registry by hand (the CLI tried pnpm and a stray `cn` package); it imports `cn` from `@/lib/utils`. `recharts` 3.8.0 installed with npm | Keep npm as the only package manager (package-lock.json) |
 
 ## Open questions
 

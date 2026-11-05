@@ -11,6 +11,7 @@ use App\Enums\PipelineOutcome;
 use App\Enums\PipelineStep;
 use App\Models\Company;
 use App\Models\EmailAddress;
+use App\Models\Setting;
 use App\Services\Verification\VerificationPlanner;
 
 /**
@@ -27,6 +28,11 @@ final class ApplyVerificationResultAction
             'verification_raw' => $result->raw,
             'verified_at' => now(),
         ]);
+
+        // The balance comes free with each result; the dashboard shows the last one (D86).
+        if ($result->creditsLeft !== null) {
+            Setting::put('millionverifier.credits', ['credits' => $result->creditsLeft, 'at' => now()->toIso8601String()]);
+        }
 
         if ($result->status === EmailVerificationStatus::Ok && $email->person !== null) {
             $email->person->update(['email_id' => $email->id]);

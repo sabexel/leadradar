@@ -309,3 +309,19 @@
 - Decisions: D82–D84.
 - Notes / follow-ups: Docker Desktop had stopped (tests could not reach MySQL on 3317) — started it again; the
   `leadradar-mysql` volume was intact. P1 is complete; P2 (dashboard) is next.
+
+## 2026-11-05 — P2.1 Dashboard page
+- Done: `DashboardController` (invokable, replaces the starter `Route::inertia`) → `App\Queries\DashboardQuery`
+  with DTO `DateRange` (today / 7d / 30d / custom, London days). Props: stat cards, qualified per day (30 days) vs
+  target, funnel, reject reasons, score histogram 0–10, source split, last 5 runs, API usage today vs caps,
+  MillionVerifier balance. `label()` on `RejectReason`, `SignalSource`, `ExternalService`.
+  `ApplyVerificationResultAction` stores the returned credit balance. React page `resources/js/pages/dashboard.tsx`
+  (+ `types/dashboard.ts`) with shadcn cards, toggle group range picker, Recharts via the shadcn `chart` component.
+- Tests: `tests/Feature/Dashboard/DashboardPageTest.php` (7) replaces the starter `DashboardTest`: guest redirect;
+  empty dashboard; cards for today vs 7 days; London-day boundaries (BST); custom/broken ranges; funnel + reject
+  reasons + histogram; runs + API usage vs cap + credits. 490 passing; Pint, Larastan, vp check, tsc, vp build clean.
+  Manual browser check on `php artisan serve` with the local demo seed: all cards, charts, panels and the custom
+  range (query string) work; no console errors. Temporary runs/API-usage rows were removed afterwards.
+- Decisions: D85–D87.
+- Notes / follow-ups: sidebar still has only Dashboard (and the starter's Repository/Documentation footer links) —
+  add Leads/Imports/Runs/Settings as those pages land in P2.2–P2.7.

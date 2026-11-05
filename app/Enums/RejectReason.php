@@ -20,4 +20,21 @@ enum RejectReason: string
     case NoLaravelEvidence = 'no_laravel_evidence';
     case Suppressed = 'suppressed';
     case BelowThreshold = 'below_threshold';
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::NotOnRegistry => 'Not on registry',
+            self::NotActive => 'Not active',
+            self::WrongLegalForm => 'Wrong legal form',
+            self::Dormant => 'Dormant',
+            self::Recruiter => 'Recruiter',
+            self::Offshore => 'Offshore',
+            self::NoWebsite => 'No website',
+            self::NoValidEmail => 'No valid email',
+            self::NoLaravelEvidence => 'No Laravel evidence',
+            self::Suppressed => 'Suppressed',
+            self::BelowThreshold => 'Below threshold',
+        };
+    }
 }

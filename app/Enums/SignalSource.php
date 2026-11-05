@@ -14,4 +14,15 @@ enum SignalSource: string
     case Manual = 'manual';
     case Import = 'import';
     case LaravelPartners = 'laravel_partners';
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::Reed => 'Reed',
+            self::Adzuna => 'Adzuna',
+            self::Manual => 'Manual',
+            self::Import => 'Import',
+            self::LaravelPartners => 'Laravel Partners',
+        };
+    }
 }
