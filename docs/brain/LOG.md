@@ -325,3 +325,25 @@
 - Decisions: D85–D87.
 - Notes / follow-ups: sidebar still has only Dashboard (and the starter's Repository/Documentation footer links) —
   add Leads/Imports/Runs/Settings as those pages land in P2.2–P2.7.
+
+## 2026-11-05 — P2.2 Leads index
+- Done: `CompanyController@index` + `@bulk`, `App\Queries\CompanyIndexQuery` (filters → normalised filter state,
+  filtered/sorted query, paginator, row shape), `BulkCompanyActionRequest`, actions `UpdateOutreachStatusAction`
+  and `SuppressCompanyAction`. Routes `companies.index`, `companies.bulk`. React page
+  `resources/js/pages/companies/index.tsx` (search with debounce, multi-selects, country/source/reject-reason
+  selects, score slider + Excellent/Good/Near miss chips, qualified date range, verified/LinkedIn toggles, sortable
+  headers, bulk bar with confirm on suppressing actions, pagination + per-page), `components/lead-badges.tsx`
+  (score/verification/status badges for reuse in P2.3), `types/companies.ts`; shadcn `slider` + `table`; sidebar
+  "Leads".
+- Tests: `tests/Feature/Companies/CompanyIndexTest.php` (14): guest redirect; columns + default score order with
+  unscored last; status/outreach/type/score filters (incl. comma lists, bogus values ignored); country, source,
+  qualified date (London-day boundary), reject reason, invalid date; verified email + LinkedIn toggles; search on
+  name/domain/founder/email with LIKE wildcards escaped; sorts + pagination keeping the query string; bulk
+  contacted (first contact date kept), not interested (+ domain / company-number suppression), suppress domain
+  (skips no-domain), retry from step (skips qualified, dispatches the crawl job), validation. 504 passing; Pint,
+  Larastan, vp check, tsc, vp build clean.
+  Manual browser check with the local demo seed: table, Excellent chip, search, select + "Mark contacted" toast;
+  no console errors. The demo lead was reset afterwards.
+- Decisions: D88–D90.
+- Notes / follow-ups: company names are not links yet — the detail page is P2.3. "Select all matching" across
+  pages is not built (page selection only).

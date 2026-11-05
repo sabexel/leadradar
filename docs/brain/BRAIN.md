@@ -8,13 +8,13 @@
 ## Current status
 
 - **Phase:** P2 (dashboard) in progress
-- **Last completed task:** P2.1 Dashboard page (cards, charts, last runs, API usage)
-- **Working on:** P2.2
+- **Last completed task:** P2.2 Leads index (filters, sort, bulk actions)
+- **Working on:** P2.3
 - **Blocked by:** — (building with faked APIs; owner is registering API keys)
 
 ## Next step
 
-1. **P2.2** — Leads index (`/companies`) per docs/07 §2: columns, all filters in the URL query string, sort, score badge, bulk actions (mark contacted / not interested, suppress domain, re-run from step, export CSV — export itself is P2.5). Add `app/Queries/CompanyIndexQuery.php` (docs/02) and the sidebar entries (Leads, Imports, Runs, Settings) as each page lands. Feature tests with Inertia assertions + a manual browser check.
+1. **P2.3** — Lead detail (`/companies/{id}`) per docs/07 §3: header (score badge, status, type, outreach selector, website + Companies House links), company card with email sources + verification badges, founders 1–2 (role, appointed, LinkedIn, email + status, other tried candidates), score breakdown with evidence, Laravel/offshore evidence and signals, pipeline timeline with Retry on failed steps, editable notes. Link company names in the leads table to it. Reuse `components/lead-badges.tsx`, `RetryPipelineStepAction`, `UpdateOutreachStatusAction`. Feature tests + manual browser check.
 2. Owner: put API keys in `.env`; one live call each to confirm Reed JSON keys (D23), Adzuna limits (D31), CH search, Brave query + quota, MillionVerifier result values (D67). Then a first real run: `php artisan leadradar:import-contacted <your sheet export>.csv` (keep the file out of the repo) and `php artisan leadradar:discover --manual` with `php artisan queue:work`.
 3. Owner: publish https://webwayout.co.uk/bot (crawler UA points there, docs/09).
 4. Confirm the Hostinger plan offers PHP 8.4+ (D30).
@@ -51,7 +51,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 
 ### P2 — Dashboard
 - [x] P2.1 Dashboard page: counters, charts, last runs
-- [ ] P2.2 Companies index: filters, sort, score badge, bulk actions
+- [x] P2.2 Companies index: filters, sort, score badge, bulk actions
 - [ ] P2.3 Company detail: all fields, founders, emails + verification, score breakdown, timeline
 - [ ] P2.4 Mark contacted / replied / not interested (outreach status)
 - [ ] P2.5 CSV export in the outreach-sheet column order
@@ -161,6 +161,9 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 | D85 | 2026-11-05 | Dashboard counting (`App\Queries\DashboardQuery`): "Qualified", the per-day chart and the average score count by `qualified_at` (same clock as the daily target); Rejected / In progress (discovered + enriching) / Errors, the funnel, reject reasons and the score histogram describe the cohort of companies *created* in the range, by current status; Scraped and the source split count signals created in the range; Contacted/Replied count `contacted_at` in the range (Replied = replied or client). All days are London days; range presets today/7d/30d/custom (max 1 year, swapped if reversed, invalid → today) live in the query string | docs/07 §1 lists the cards but not what each one counts; qualified must match the daily target, and a status snapshot per cohort keeps the funnel consistent |
 | D86 | 2026-11-05 | The MillionVerifier balance on the dashboard is the `credits` value MillionVerifier returns with each verification, stored in setting `millionverifier.credits` (`{credits, at}`) by `ApplyVerificationResultAction` — the dashboard never calls the API. A live balance check (`MillionVerifierService::credits()`) belongs to the Settings "Test connection" button (P2.6) | Controllers make no external calls; the balance comes free with every result |
 | D87 | 2026-11-05 | shadcn `chart` component written from the shadcn registry by hand (the CLI tried pnpm and a stray `cn` package); it imports `cn` from `@/lib/utils`. `recharts` 3.8.0 installed with npm | Keep npm as the only package manager (package-lock.json) |
+| D88 | 2026-11-05 | Leads index filters live in the query string (`status[]`/`outreach[]`/`type[]` or comma lists, `score_min`/`score_max`, `country`, `source`, `qualified_from`/`qualified_to` as London dates, `verified`, `linkedin`, `reject_reason`, `q`, `sort` score/qualified_at/name, `dir`, `per_page` 25/50/100). Invalid values are ignored, never an error (bookmarks keep working). Score sort puts unscored companies last both ways. "Has verified founder email" = a current founder whose chosen email is `ok`. Source = any of the company's signals has that source. Quick chips: Excellent 8–10, Good 6–7.9, Near miss = rejected `below_threshold` with 4–5.9 (docs/06) | docs/07 §2 |
+| D89 | 2026-11-05 | Bulk actions (`POST /companies/bulk`, max 500 ids, current page selection only): Mark contacted / not interested go through `UpdateOutreachStatusAction` (any status other than not_contacted sets `contacted_at` once and never moves it; not interested also suppresses the domain — or the company number without one — with reason `not_interested`; the lead's pipeline status is left alone). Suppress domain (`SuppressCompanyAction`) adds a `manual` domain suppression and stops the lead (`suppressed`); leads without a domain are skipped. Re-run from step uses `RetryPipelineStepAction` (rejected/errored only, others skipped; step optional, `done` not allowed). Result shown as a flash toast with skipped counts. Export CSV comes with P2.5 | Reuses P1 actions; `UpdateOutreachStatusAction` also covers most of P2.4 (the detail-page selector still to wire up) |
+| D90 | 2026-11-05 | shadcn `slider` and `table` written by hand from the registry like D87; the slider imports `@radix-ui/react-slider` (installed) instead of the `radix-ui` umbrella package. Sidebar: Leads added; the starter's footer now links to this repo, Documentation link removed | Same npm-only rule; consistent with the per-package radix deps already used |
 
 ## Open questions
 
