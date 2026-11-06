@@ -8,6 +8,7 @@ use App\Enums\ExternalService;
 use App\Models\ApiUsage;
 use App\Models\ScrapeRun;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -95,10 +96,27 @@ final class RunsQuery
      */
     public function failedJobs(): array
     {
-        return array_values(DB::table('failed_jobs')
+        return $this->mapFailedJobs(DB::table('failed_jobs')->limit(50));
+    }
+
+    /**
+     * Every failed queue job since the given moment, newest first (failed jobs are pruned after 7 days).
+     *
+     * @return list<array{uuid: string, job: string, queue: string, error: string, failedAt: string}>
+     */
+    public function failedJobsSince(CarbonImmutable $since): array
+    {
+        return $this->mapFailedJobs(DB::table('failed_jobs')->where('failed_at', '>=', $since->utc()));
+    }
+
+    /**
+     * @return list<array{uuid: string, job: string, queue: string, error: string, failedAt: string}>
+     */
+    private function mapFailedJobs(Builder $query): array
+    {
+        return array_values($query
             ->orderByDesc('failed_at')
             ->orderByDesc('id')
-            ->limit(50)
             ->get(['uuid', 'queue', 'payload', 'exception', 'failed_at'])
             ->map(function (object $row): array {
                 $payload = json_decode((string) $row->payload, true);

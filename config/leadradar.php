@@ -30,4 +30,16 @@ return [
 
     'caps_resume_at' => '06:00',
 
+    /*
+    |--------------------------------------------------------------------------
+    | Alerts
+    |--------------------------------------------------------------------------
+    |
+    | The daily failed-jobs summary goes here. When empty it goes to the
+    | (single) user account's email address.
+    |
+    */
+
+    'alert_email' => env('LEADRADAR_ALERT_EMAIL'),
+
 ];

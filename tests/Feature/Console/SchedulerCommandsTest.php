@@ -189,6 +189,8 @@ it('schedules the worker, discovery, run closing and pruning as in docs/08', fun
         ->and($find('leadradar:discover')->expression)->toBe('10 6 * * *')
         ->and($find('leadradar:discover')->timezone)->toBe('Europe/London')
         ->and($find('leadradar:close-runs')->expression)->toBe('*/15 * * * *')
+        ->and($find('leadradar:report-failed-jobs')->expression)->toBe('0 7 * * *')
+        ->and($find('leadradar:report-failed-jobs')->timezone)->toBe('Europe/London')
         ->and($find('queue:prune-failed --hours=168'))->not->toBeNull()
         ->and($find('model:prune'))->not->toBeNull();
 });

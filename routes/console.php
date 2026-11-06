@@ -20,5 +20,6 @@ Schedule::command('queue:work --queue=registry,verify,web,sources --stop-when-em
 
 Schedule::command('leadradar:discover')->dailyAt('06:10')->timezone('Europe/London');
 Schedule::command('leadradar:close-runs')->everyFifteenMinutes();
+Schedule::command('leadradar:report-failed-jobs')->dailyAt('07:00')->timezone('Europe/London');
 Schedule::command('queue:prune-failed --hours=168')->daily();
 Schedule::command('model:prune')->daily(); // companies (12 months idle), pipeline_events, api_usages
