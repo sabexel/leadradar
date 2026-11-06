@@ -423,3 +423,18 @@
   file, so the file-input UI itself was only covered by the tests.)
 - Decisions: D97–D98.
 - Notes / follow-ups: P2 is complete. P3.1 needs owner input first (hosting plan, SSH secrets, domain).
+
+## 2026-11-06 — P3.2 Failed-jobs daily email + smoke test checklist; P3.1 deploy workflow (code only)
+- Done: `leadradar:report-failed-jobs` (`ReportFailedJobsCommand`), mailable `FailedJobsSummary` + markdown view
+  `mail/failed-jobs-summary`, `RunsQuery::failedJobsSince()` (shares the row mapping with the Runs page), config
+  `leadradar.alert_email` / `LEADRADAR_ALERT_EMAIL`, scheduled daily 07:00 London. `.github/workflows/deploy.yml`.
+  README "Deploy" section: one-time Hostinger setup, GitHub secrets, production `.env` template, cron line,
+  monitoring, production smoke-test checklist.
+- Tests: `tests/Feature/Console/ReportFailedJobsTest.php` (5): nothing sent on a clean day (older failures ignored);
+  summary to the alert address with only the last 24 h, newest first, first exception line only, Runs link; fallback
+  to the user's email + singular subject; 20 listed + "and 3 more"; no recipient → warning, no mail. Schedule test
+  asserts 07:00 London. 561 passing; Pint, Larastan clean. Workflow YAML parses (10 steps); not yet run on GitHub.
+- Decisions: D99–D100. Open question on the Hostinger plan closed (shared hosting).
+- Notes / follow-ups: P3.1 stays open until the server is set up (owner: SSH access or Hostinger MCP, domain,
+  GitHub secrets, API keys) and the README smoke test passes. The deploy job is skipped until the repository
+  variable `DEPLOY_ENABLED=true` is set, so green CI runs on main don't fail on missing secrets meanwhile.

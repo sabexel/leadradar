@@ -7,14 +7,14 @@
 
 ## Current status
 
-- **Phase:** P2 complete — P3 (deploy) next
-- **Last completed task:** P2.7 Imports page (company lists + suppression import with column mapping)
-- **Working on:** P3.1
-- **Blocked by:** — (building with faked APIs; owner is registering API keys)
+- **Phase:** P3 (deploy) — code done, server setup pending
+- **Last completed task:** P3.2 Failed-jobs daily email + production smoke test checklist; P3.1 `deploy.yml` written
+- **Working on:** P3.1 (server side)
+- **Blocked by:** owner — SSH access / Hostinger MCP, GitHub Actions secrets, domain, API keys
 
 ## Next step
 
-1. **P3.1** — Hostinger deploy per docs/08: `.github/workflows/deploy.yml` (build assets in CI, rsync/SSH to Hostinger, `composer install --no-dev`, `php artisan migrate --force`, config/route/view cache), the single cron line for `schedule:run`, queue via the scheduler (already in `routes/console.php`), first production run. **Needs the owner first:** Hostinger plan type (shared/cloud vs VPS, open question) and PHP 8.4+ available (D30); SSH host/user/port and a deploy key added as GitHub Actions secrets (never in the repo); production `.env` created on the server by hand; the domain/subdomain to serve from. Read docs/08 before starting.
+1. **P3.1 server side** — the code is in place (`.github/workflows/deploy.yml`, README → "Deploy", D100). Remaining: owner gives SSH access (or connects the Hostinger MCP) and the (sub)domain; then hPanel PHP 8.4 + extensions, MySQL DB, app folder outside `public_html` with a hand-made production `.env` (README template), document root → `public`, the five `HOSTINGER_*` GitHub secrets + variable `DEPLOY_ENABLED=true` (+ `HOSTINGER_PHP` if the SSH `php` isn't 8.4), first deploy, create the user, the every-minute cron line. Then walk the README "Production smoke test" checklist; P3.1 is ticked when a scheduled run completes and qualified leads appear (docs/10 P3 acceptance).
 2. Owner: put API keys in `.env`; then Settings → "Test connection" for each service to confirm Reed JSON keys (D23), Adzuna limits (D31), CH search, Brave quota, MillionVerifier (D67). Then a first real run: Imports → suppression import with your outreach sheet, and Runs → "Run discovery now" with `php artisan queue:work`.
 3. Owner: publish https://webwayout.co.uk/bot (crawler UA points there, docs/09).
 
@@ -59,7 +59,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 
 ### P3 — Deploy
 - [ ] P3.1 Hostinger deploy (GitHub Actions → SSH/rsync), cron, queue via scheduler
-- [ ] P3.2 Production smoke test + monitoring (failed jobs alert by email)
+- [x] P3.2 Production smoke test + monitoring (failed jobs alert by email) — checklist in README; run it during P3.1
 
 ### P4 — Extensions (only after P3 is live and producing leads)
 - [ ] P4.1 Laravel Partners directory source
@@ -171,10 +171,11 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 | D96 | 2026-11-05 | Runs page: runs paginated 20/page; API usage = last 14 London days × every service (calls · cost units · errors, errors = no status or ≥ 400); failed jobs = newest 50 from `failed_jobs` (job class, queue, first exception line) with Retry (`queue:retry {uuid}`) and Remove (`queue:forget`); "Run discovery now" = `StartDiscoveryRunAction(manual)`, throttled to 6/min, with the skipped reasons in the toast. Settings form: target 1–500, threshold 0–10, signal age 1–90 days, 1–20 keywords (lower-cased, de-duplicated), 1–10 two-letter countries, caps ≥ 0 (CH ≤ 600 per 5 min, pages per company 1–20) | docs/07 §5–6 |
 | D97 | 2026-11-05 | Company import (`ImportCompaniesAction`, `/imports`): pasted lines are a name, a domain/URL, or "Name, domain" (last comma or a tab); CSV columns detected from headers (name: company name / company / account name / organisation / business name / name, not first/last/founder/contact names; website: website / domain / url, not signal/LinkedIn/job links) or chosen in the UI. A domain-only entry gets a name from its first label ("example-digital.co.uk" → "Example Digital") for the registry search. Skipped: same domain or normalised name already in LeadRadar, repeats within the list, suppressed domains, unreadable lines. Each new company gets one `import` signal (title "Imported") and a timeline event, then `AdvanceLeadPipelineAction` (a known website skips the Brave search). Max 500 rows per import; same per-name lock as job-ad ingest | docs/07 §4; import signals never earn job-ad points (D-scoring counts only Reed/Adzuna ads) |
 | D98 | 2026-11-05 | Uploads are never stored: `POST /imports/preview` reads the temporary upload, returns headers + detected columns as JSON (fetch with the XSRF cookie) and PHP discards the file; the import POST sends the same file again with the chosen columns. `CsvReader` (support service) now reads every CSV (`,`/`;`, BOM, blank rows) for both importers; `ImportContactedCsvAction::preview()` exposes its detection. Suppression import from the page: tick website / email / company-number columns per header, pick a reason (default already_contacted). Files ≤ 5 MB, csv/txt only | docs/09 (no prospect data kept), docs/07 §4 column mapping |
+| D99 | 2026-11-06 | Hostinger plan = **shared hosting** (owner confirmed): cron-driven worker from docs/08, no supervisor. Failed-jobs alert = `leadradar:report-failed-jobs`, daily 07:00 London: failed jobs of the last 24 h (job class, queue, first exception line, max 20 listed + "and N more", counts per job class, link to Runs) to `LEADRADAR_ALERT_EMAIL`, else the first user's email; nothing on a clean day; sent synchronously (not queued) | docs/08 "Monitoring"; a queued alert would die with the queue it reports on |
+| D100 | 2026-11-06 | `deploy.yml` is off until the repository variable `DEPLOY_ENABLED = true`; then it runs on `workflow_run` of `ci` (success, `push` to `main`) or by hand, environment `production`, never cancels a running deploy. Builds `composer --no-dev` + Vite in CI (throwaway `.env` for Wayfinder), refuses to deploy without a server `.env`, `artisan down` → `rsync -az --delete` (excludes `.env*`, `.git`, `.github`, `storage/`, `node_modules`, `tests`, `docs`, docker files, `public/hot`, `public/storage`) → `migrate --force`, `SettingsSeeder` (firstOrCreate, D18), `optimize`, `queue:restart`, `up`; `up` again on failure. PHP binary over SSH configurable via repo variable `HOSTINGER_PHP` | docs/08 CI/CD; `workflow_run` only for pushes keeps secrets away from fork PRs in this public repo; new settings land without a manual seed |
 
 ## Open questions
 
-- Hostinger plan type (shared/cloud vs VPS) — confirm before P3.1. Default plan in `docs/08` assumes shared/cloud.
 - Is Brave Search API's free tier enough for website + LinkedIn lookups at 50 leads/day? P1.6: the API docs don't state plan quotas — owner to check the Brave dashboard; cap stays 150/day until then.
 
 ## Environment / keys status

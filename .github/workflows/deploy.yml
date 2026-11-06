@@ -1,0 +1,125 @@
+name: deploy
+
+# docs/08: build in CI (Hostinger shared hosting has no Node), rsync over SSH, then migrate + cache on the server.
+# Runs only after `ci` passes on a push to main, or by hand. Secrets: HOSTINGER_HOST, HOSTINGER_PORT,
+# HOSTINGER_USER, HOSTINGER_SSH_KEY, HOSTINGER_PATH. Repository variables: DEPLOY_ENABLED=true turns deploys on;
+# HOSTINGER_PHP (optional, default `php`).
+# API keys never come through here — they live only in the server's .env.
+
+on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >-
+      vars.DEPLOY_ENABLED == 'true' && (
+        github.event_name == 'workflow_dispatch' ||
+        (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+      )
+    runs-on: ubuntu-latest
+    environment: production
+
+    env:
+      APP_PATH: ${{ secrets.HOSTINGER_PATH }}
+      PHP_BIN: ${{ vars.HOSTINGER_PHP || 'php' }}
+      SSH_USER: ${{ secrets.HOSTINGER_USER }}
+      SSH_PORT: ${{ secrets.HOSTINGER_PORT }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, mbstring, intl, curl, dom, fileinfo, zip
+          tools: composer:v2
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      # Wayfinder runs artisan during the Vite build, so the app needs a throwaway .env here (never uploaded).
+      - name: Install PHP dependencies (production)
+        run: |
+          cp .env.example .env
+          composer install --no-dev --no-interaction --prefer-dist --no-progress --optimize-autoloader
+          php artisan key:generate
+
+      - name: Build assets
+        run: |
+          npm ci
+          npm run build
+
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.HOSTINGER_SSH_KEY }}
+          SSH_HOST: ${{ secrets.HOSTINGER_HOST }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          printf 'Host target\n  HostName %s\n  Port %s\n  User %s\n  IdentityFile ~/.ssh/deploy_key\n  IdentitiesOnly yes\n' \
+            "$SSH_HOST" "$SSH_PORT" "$SSH_USER" > ~/.ssh/config
+
+      - name: Check the server is ready and enter maintenance mode
+        run: |
+          ssh target "set -e
+            mkdir -p '$APP_PATH'
+            cd '$APP_PATH'
+            test -f .env || { echo 'No .env in $APP_PATH — create it by hand first (README → Deploy).'; exit 1; }
+            if [ -f artisan ]; then $PHP_BIN artisan down --retry=60 || true; fi"
+
+      # --delete removes files that are gone from the repo; excluded paths on the server are never touched.
+      - name: Upload
+        run: |
+          rsync -az --delete \
+            --exclude='/.env' \
+            --exclude='/.env.*' \
+            --exclude='/.git/' \
+            --exclude='/.github/' \
+            --exclude='/.cursor/' \
+            --exclude='/.claude/' \
+            --exclude='/node_modules/' \
+            --exclude='/storage/' \
+            --exclude='/tests/' \
+            --exclude='/docs/' \
+            --exclude='/docker/' \
+            --exclude='/docker-compose.yml' \
+            --exclude='/public/hot' \
+            --exclude='/public/storage' \
+            -e ssh ./ "target:$APP_PATH/"
+
+      - name: Migrate, cache, restart the worker
+        run: |
+          ssh target "set -e
+            cd '$APP_PATH'
+            mkdir -p storage/app/public storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
+            $PHP_BIN artisan migrate --force
+            $PHP_BIN artisan db:seed --class=SettingsSeeder --force
+            $PHP_BIN artisan optimize
+            $PHP_BIN artisan queue:restart
+            $PHP_BIN artisan up"
+
+      - name: Leave maintenance mode if the deploy failed
+        if: failure()
+        run: ssh target "cd '$APP_PATH' && [ -f artisan ] && $PHP_BIN artisan up || true"
