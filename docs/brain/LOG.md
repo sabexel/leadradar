@@ -438,3 +438,10 @@
 - Notes / follow-ups: P3.1 stays open until the server is set up (owner: SSH access or Hostinger MCP, domain,
   GitHub secrets, API keys) and the README smoke test passes. The deploy job is skipped until the repository
   variable `DEPLOY_ENABLED=true` is set, so green CI runs on main don't fail on missing secrets meanwhile.
+
+## 2026-11-09 — P3.1 Hosting facts confirmed (no code)
+- Done: owner confirmed PHP 8.4 is available and chose `leads.webwayout.co.uk`. Checked over HTTPS: the root domain
+  serves the live marketing site (Hostinger behind Cloudflare), `/bot` is 404, the subdomain does not resolve yet.
+- Tests: n/a
+- Decisions: D101.
+- Notes / follow-ups: P3.1 stays open; the server setup steps are in README → "Deploy".
