@@ -8,7 +8,9 @@ use App\Enums\LeadStatus;
 use App\Enums\PipelineOutcome;
 use App\Enums\PipelineStep;
 use App\Models\Company;
+use App\Models\EmailAddress;
 use App\Services\Crawler\RobotsTxtGuard;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 /**
@@ -69,9 +71,29 @@ final class RetryPipelineStepAction
             PipelineStep::Crawl => $this->resetCrawl($company),
             // Search again for founders that were looked up but not found.
             PipelineStep::FindLinkedIn => $company->people()->whereNull('linkedin_url')->update(['linkedin_checked_at' => null]),
-            PipelineStep::FindWebsite => $company->update(['website' => null, 'domain' => null]),
+            PipelineStep::FindWebsite => $this->resetWebsite($company),
             default => null,
         };
+    }
+
+    /**
+     * A new website search means the old site was probably wrong: everything learned from it goes too —
+     * crawled pages, Laravel evidence and every address on its domain (founders' chosen emails and the
+     * contact/careers links are nulled by their foreign keys).
+     */
+    private function resetWebsite(Company $company): void
+    {
+        $domain = $company->domain;
+
+        $this->resetCrawl($company);
+
+        if ($domain !== null) {
+            $company->emailAddresses()->get()
+                ->filter(fn (EmailAddress $e): bool => Str::lower(Str::after($e->email, '@')) === $domain || Str::endsWith(Str::lower($e->email), '.'.$domain))
+                ->each(fn (EmailAddress $e) => $e->delete());
+        }
+
+        $company->update(['website' => null, 'domain' => null, 'laravel_evidence' => null]);
     }
 
     private function resetCrawl(Company $company): void

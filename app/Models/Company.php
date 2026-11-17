@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Prunable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 /**
  * @property int $id
@@ -198,6 +199,15 @@ class Company extends Model
     public function isAwaiting(PipelineStep $step): bool
     {
         return ! $this->isFinished() && $this->pipeline_step === $step;
+    }
+
+    /**
+     * The name a company uses for itself on the web: trading name without the legal suffix
+     * ("Example Digital Ltd" → "Example Digital"). Used for every web search query.
+     */
+    public function searchName(): string
+    {
+        return Str::squish((string) preg_replace('/[\s,]+(?:ltd|limited|llp|plc|uk)\.?$/i', '', $this->name));
     }
 
     /**

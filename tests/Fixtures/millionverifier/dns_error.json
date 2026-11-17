@@ -1,0 +1,14 @@
+{
+    "email": "jane@example-digital.test",
+    "quality": "bad",
+    "result": "invalid",
+    "resultcode": 6,
+    "subresult": "dns_error",
+    "free": false,
+    "role": false,
+    "didyoumean": "",
+    "credits": 3454,
+    "executiontime": 1,
+    "error": "",
+    "livemode": true
+}

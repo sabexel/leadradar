@@ -10,7 +10,6 @@ use App\Enums\PipelineStep;
 use App\Models\Company;
 use App\Models\Person;
 use App\Services\Search\LinkedInProfileSelector;
-use Illuminate\Support\Str;
 
 /**
  * Local, sync (`find_linkedin` step): who to look up next, storing a found URL with its provenance, finishing.
@@ -62,6 +61,6 @@ final class ApplyLinkedInResultAction
      */
     public function companyQueryName(Company $company): string
     {
-        return Str::squish((string) preg_replace('/[\s,]+(?:ltd|limited|llp|plc|uk)\.?$/i', '', $company->name));
+        return $company->searchName();
     }
 }

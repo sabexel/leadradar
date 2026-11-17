@@ -44,13 +44,13 @@ final class BraveSearchService extends ExternalApiService
     }
 
     /**
-     * One query: `"{legal name}" {town}`, UK results. Null when no result looks like the company's own site.
+     * One query: `"{name}"`, UK results. Pass the name without its legal suffix (`Company::searchName()`):
+     * "Ltd" in the phrase, or a town from the job ad, steers the results to company-data directories (D104).
+     * Null when no result looks like the company's own site.
      */
-    public function findCompanyWebsite(string $name, ?string $town = null): ?SearchResult
+    public function findCompanyWebsite(string $name): ?SearchResult
     {
-        $query = trim('"'.Str::squish($name).'" '.Str::squish((string) $town));
-
-        return $this->websites->select($name, $this->search($query));
+        return $this->websites->select($name, $this->search('"'.Str::squish($name).'"'));
     }
 
     /**

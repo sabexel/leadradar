@@ -15,7 +15,7 @@
 ## Next step
 
 1. **P3.1 server side** — the code is in place (`.github/workflows/deploy.yml`, README → "Deploy", D100). Remaining: domain is `leads.webwayout.co.uk` and PHP 8.4 is available (D101). Owner: create the subdomain (plus a DNS record in Cloudflare if DNS is managed there), then hPanel PHP 8.4 + extensions, MySQL DB, app folder outside `public_html` with a hand-made production `.env` (README template), document root → `public`, the five `HOSTINGER_*` GitHub secrets + variable `DEPLOY_ENABLED=true` (+ `HOSTINGER_PHP` if the SSH `php` isn't 8.4), first deploy, create the user, the every-minute cron line. Then walk the README "Production smoke test" checklist; P3.1 is ticked when a scheduled run completes and qualified leads appear (docs/10 P3 acceptance).
-2. Owner: put API keys in `.env`; then Settings → "Test connection" for each service to confirm Reed JSON keys (D23), Adzuna limits (D31), CH search, Brave quota, MillionVerifier (D67). Then a first real run: Imports → suppression import with your outreach sheet, and Runs → "Run discovery now" with `php artisan queue:work`.
+2. Local keys are all in and tested; first real run done (run #4, LOG 2026-11-17): 2 qualified after the D102–D104 fixes. Still open: owner to report the Brave plan quota and Adzuna limits (D31); suppression import of the outreach sheet before more runs; decide on the recruiter-text fix (Known issues).
 3. Owner: publish https://webwayout.co.uk/bot (crawler UA points there, docs/09).
 
 ---
@@ -174,7 +174,9 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 | D99 | 2026-11-06 | Hostinger plan = **shared hosting** (owner confirmed): cron-driven worker from docs/08, no supervisor. Failed-jobs alert = `leadradar:report-failed-jobs`, daily 07:00 London: failed jobs of the last 24 h (job class, queue, first exception line, max 20 listed + "and N more", counts per job class, link to Runs) to `LEADRADAR_ALERT_EMAIL`, else the first user's email; nothing on a clean day; sent synchronously (not queued) | docs/08 "Monitoring"; a queued alert would die with the queue it reports on |
 | D100 | 2026-11-06 | `deploy.yml` is off until the repository variable `DEPLOY_ENABLED = true`; then it runs on `workflow_run` of `ci` (success, `push` to `main`) or by hand, environment `production`, never cancels a running deploy. Builds `composer --no-dev` + Vite in CI (throwaway `.env` for Wayfinder), refuses to deploy without a server `.env`, `artisan down` → `rsync -az --delete` (excludes `.env*`, `.git`, `.github`, `storage/`, `node_modules`, `tests`, `docs`, docker files, `public/hot`, `public/storage`) → `migrate --force`, `SettingsSeeder` (firstOrCreate, D18), `optimize`, `queue:restart`, `up`; `up` again on failure. PHP binary over SSH configurable via repo variable `HOSTINGER_PHP` | docs/08 CI/CD; `workflow_run` only for pushes keeps secrets away from fork PRs in this public repo; new settings land without a manual seed |
 | D101 | 2026-11-09 | Production address = `leads.webwayout.co.uk`. PHP 8.4 confirmed available on the owner's Hostinger plan (closes the D30 check). The root domain is NOT used: `webwayout.co.uk` serves the live Webwayout marketing site on the same Hostinger account. The site is behind Cloudflare, so the subdomain may also need a DNS record there. `https://webwayout.co.uk/bot` still returns 404 — publish it on the main site before the first real crawl (docs/09) | Pointing LeadRadar at the root domain would replace the live site; LeadRadar is an internal tool behind a login |
-
+| D102 | 2026-11-17 | `WebsiteSelector` accepts (1) the first result whose **domain** contains a significant name token, else (2) the first **home page** (path `/`, `/index…`, `/home…`, `/en`, `/en-gb`, no query) whose **title** has a token as a whole word. Snippets no longer count; deep pages never count. The 8 directories from the first live run were added to the blocklist | First live run (run #4): all 8 picks were company-data directories (deep pages titled with the company name), costing 84 MillionVerifier credits on guesses at the wrong domains |
+| D103 | 2026-11-17 | `VerificationPlanner` treats a domain as a dead end (like catch_all, D68) once a fresh result is `invalid` with subresult `dns_error`: no more addresses on it are verified | One answer proves the domain has no mail server; the other guesses were 6+ wasted credits per founder |
+| D104 | 2026-11-17 | Website query = `"{Company::searchName()}"` — trading name without Ltd/Limited/LLP/PLC/UK, quoted, no town (was `"{legal name}" {town}`). `searchName()` is now shared with the LinkedIn query (D71). `RetryPipelineStepAction` from `find_website` also deletes crawled pages, forgets robots.txt, deletes every address on the old domain and clears `laravel_evidence` | Live A/B on 10 companies: "LTD" in the phrase + the job-ad town returned only directories; the plain quoted name put the real site first for all 10. A retry after a wrong site must not keep data learned from it |
 ## Open questions
 
 - Is Brave Search API's free tier enough for website + LinkedIn lookups at 50 leads/day? P1.6: the API docs don't state plan quotas — owner to check the Brave dashboard; cap stays 150/day until then.
@@ -185,14 +187,19 @@ Record only **whether** a key is configured — never the value.
 
 | Key | Local | Production |
 |---|---|---|
-| `COMPANIES_HOUSE_API_KEY` | ☐ | ☐ |
-| `REED_API_KEY` | ☐ | ☐ |
-| `ADZUNA_APP_ID` / `ADZUNA_APP_KEY` | ☐ | ☐ |
-| `MILLIONVERIFIER_API_KEY` | ☐ | ☐ |
-| `BRAVE_SEARCH_API_KEY` | ☐ | ☐ |
+| `COMPANIES_HOUSE_API_KEY` | ☑ (test connection OK 2026-11-17) | ☐ |
+| `REED_API_KEY` | ☑ (live search OK 2026-11-17) | ☐ |
+| `ADZUNA_APP_ID` / `ADZUNA_APP_KEY` | ☑ (live search OK 2026-11-17: 29 "laravel" ads ≤ 30 days, 22 employers, field mapping confirmed) | ☐ |
+| `MILLIONVERIFIER_API_KEY` | ☑ (204 credits left after the first run, 2026-11-17) | ☐ |
+| `BRAVE_SEARCH_API_KEY` | ☑ (test OK 2026-11-17; plan quota still unknown) | ☐ |
 
 ## Known issues
 
 - `RecruiterDetector` flags any employer with the whole word "people" (spec keyword), e.g. a studio called "Good People Digital". Revisit if real data shows false positives.
 - `CompanyClassifier` treats "studio" (also in a company name) as agency language, so a product company called "… Studio Ltd" with an agency SIC is classified `agency` until crawl text says otherwise (P1.7).
 - A robots.txt answering 5xx means "disallow all" (RFC 9309), so that lead's site is skipped. `RetryPipelineStepAction` from `crawl` re-fetches robots.txt and re-crawls (D76); the dashboard button comes in P2.3.
+- **Reed yields almost nothing today (live check 2026-11-17).** Field names confirmed against a live response (D23 holds; search rows have no `externalUrl`, the detail call is still needed for it). But every current Reed ad for "laravel" (18), "php developer" (39) and "livewire" (1) is flagged `postedByRecruitmentAgency`, so our `postedByDirectEmployer=true` search returns 0. The flag works (e.g. "developer": 820 of 2 886 direct). Not changed: agency ads hide the real employer and D36 skips them anyway. Watch the first runs; if Reed stays at 0, consider dropping it from discovery to save calls, or a broader keyword set — owner decision.
+- **Job-ad volume is far below the 50/day target (D6).** Adzuna has 29 "laravel" ads in the last 30 days from 22 employers, ~14 of them recruiter-looking names; Reed adds 0 direct ads. Expect a handful of new companies per day from job ads. Reaching volume needs more keywords, the Imports page (Apollo lists), or P4.1 (Laravel Partners directory).
+- **Recruiters with a neutral name slip through.** Digital Waffle qualified (7.0) in run #4 although its home page title is "Tech & Digital Recruitment Agency": the recruiter check uses the ad name/text and SIC 78xxx only, not crawled page text. Fix candidate: treat "recruitment agency / recruitment consultancy / we recruit" on the home/about page as recruiter in the post-crawl classify. Owner: mark it "Not interested" meanwhile.
+- **Catch-all founders fail the contactable gate** (by design, docs/06): Focus Group, Arrive and Trybe were rejected `no_valid_email` with Founder 1 `catch_all` (guessed address, not crawled). Revisit if too many good leads die here.
+- Local dev on Windows: stopping the PowerShell wrapper of `php artisan queue:work` does not stop `php.exe` — kill the php process itself (that leak cost 43 credits in run #4).

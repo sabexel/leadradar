@@ -445,3 +445,23 @@
 - Tests: n/a
 - Decisions: D101.
 - Notes / follow-ups: P3.1 stays open; the server setup steps are in README → "Deploy".
+
+## 2026-11-17 — FIX First live run: website picking, query, dead-end domains, retry reset
+- Done: all five API keys added locally and tested (CH, Reed, Adzuna live searches; MillionVerifier balance; Brave
+  sample). Live checks: Reed field names match D23 but every current Laravel ad on Reed is agency-posted (0 direct);
+  Adzuna 29 "laravel" ads/30 days. First real discovery run #4: 18 signals → 15 companies; every one of the 8 that
+  reached `find_website` got a company-data directory as its website (D102 root cause + D104 query). Fixed
+  `WebsiteSelector` (D102), `VerificationPlanner` dead-end domains (D103), website query + shared
+  `Company::searchName()` and a full reset in `RetryPipelineStepAction` from `find_website` (D104), 8 directories
+  blocklisted. Re-ran find_website for the 10 affected companies: all 10 got their real site; 2 qualified
+  (Eventogy 7.5, Digital Waffle 7.0 — the latter is a recruiter, see Known issues), 8 rejected (5 no_valid_email,
+  2 no_laravel_evidence, 1 below_threshold). No failed jobs.
+- Tests: `WebsiteSelectorTest` (+4 incl. datasets: deep directory pages never picked, domain match preferred over
+  an earlier title-only home page, home-page title match, new blocklist entries), `VerifyEmailJobTest` (+1:
+  dns_error stops the domain; fixture `millionverifier/dns_error.json`), `FullPipelineTest` (+1: retry from
+  find_website forgets the wrong site's pages and addresses and re-qualifies), `FindCompanyWebsiteJobTest` query
+  updated. 577 passing; Pint, Larastan clean.
+- Decisions: D102–D104.
+- Notes / follow-ups: MillionVerifier balance 310 → 204 (43 of the spend came from a queue worker that kept running
+  after its PowerShell wrapper was stopped — kill `php.exe` itself). Recruiter-by-page-text fix is a candidate,
+  not done. Owner still to report the Brave plan quota and Adzuna limits.

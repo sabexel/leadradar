@@ -163,6 +163,18 @@ it('stops verifying a catch-all domain after the first answer', function () {
         ->and($company->pipeline_step)->toBe(PipelineStep::FindLinkedIn);
 });
 
+it('stops verifying a domain with no mail server after the first answer', function () {
+    fakeVerifier(['jane@example-digital.test' => 'dns_error']);
+    $company = companyWithFounders();
+
+    $calls = verifyAll($company);
+    $company->refresh();
+
+    expect($calls)->toBe(['jane@example-digital.test'])
+        ->and($company->founders->every(fn (Person $p) => $p->email_id === null))->toBeTrue()
+        ->and($company->pipeline_step)->toBe(PipelineStep::FindLinkedIn);
+});
+
 it('gives a founder no address when every guess fails', function () {
     fakeVerifier(); // everything invalid
     $company = companyWithFounders();

@@ -12,8 +12,11 @@ use Illuminate\Support\Str;
 /**
  * Local: picks a company's own website from search results (docs/04).
  *
- * First result whose domain is not a directory/social/job site AND whose domain, title or snippet
- * contains a significant token of the company name.
+ * Blocked domains (directories, socials, job sites) never count. Then, in order of preference:
+ * 1. the first result whose domain contains a significant token of the company name;
+ * 2. the first result that is a site's home page and has a significant token as a whole word in its title.
+ * A deep page that merely mentions the company is never picked: company-data directories (hundreds of them,
+ * too many to block) list every company on a page titled with its name (D102).
  */
 final class WebsiteSelector
 {
@@ -40,22 +43,50 @@ final class WebsiteSelector
             return null;
         }
 
-        return $results->first(function (SearchResult $result) use ($tokens): bool {
-            if ($result->domain === null || $this->isBlocked($result->domain)) {
-                return false;
+        $candidates = $results->filter(fn (SearchResult $r): bool => $r->domain !== null && ! $this->isBlocked($r->domain));
+
+        return $candidates->first(fn (SearchResult $r): bool => $this->domainMatches((string) $r->domain, $tokens))
+            ?? $candidates->first(fn (SearchResult $r): bool => $this->isHomePage($r->url) && $this->titleMatches($r->title, $tokens));
+    }
+
+    /**
+     * @param  list<string>  $tokens
+     */
+    private function domainMatches(string $domain, array $tokens): bool
+    {
+        $compact = str_replace(['-', '.'], '', $domain);
+
+        foreach ($tokens as $token) {
+            if (str_contains($compact, $token)) {
+                return true;
             }
+        }
 
-            $haystack = Str::lower(Str::ascii($result->domain.' '.$result->title.' '.($result->description ?? '')));
-            $compactDomain = str_replace(['-', '.'], '', $result->domain);
+        return false;
+    }
 
-            foreach ($tokens as $token) {
-                if (preg_match('/\b'.preg_quote($token, '/').'\b/', $haystack) === 1 || str_contains($compactDomain, $token)) {
-                    return true;
-                }
+    /**
+     * @param  list<string>  $tokens
+     */
+    private function titleMatches(string $title, array $tokens): bool
+    {
+        $title = Str::lower(Str::ascii($title));
+
+        foreach ($tokens as $token) {
+            if (preg_match('/\b'.preg_quote($token, '/').'\b/', $title) === 1) {
+                return true;
             }
+        }
 
-            return false;
-        });
+        return false;
+    }
+
+    private function isHomePage(string $url): bool
+    {
+        $path = (string) parse_url($url, PHP_URL_PATH);
+
+        return parse_url($url, PHP_URL_QUERY) === null
+            && preg_match('#^/?((index|home)(\.[a-z]+)?|en(-gb)?/?)?$#i', $path) === 1;
     }
 
     public function isBlocked(string $domain): bool

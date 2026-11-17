@@ -48,6 +48,33 @@ it('accepts a match on the domain alone', function () {
     expect($pick?->domain)->toBe('exampledigital.test');
 });
 
+it('never picks a deep page that only mentions the company in its title or snippet', function () {
+    // Shapes seen in the first live run: company-data directories that are not on the blocklist.
+    expect($this->selector->select('TRYBE LTD', collect([
+        hit('https://www.unlisted-bizdirectory.test/company/12345678/trybe-ltd', 'TRYBE LTD - Company profile', 'Trybe Ltd is an active company…'),
+        hit('https://intelligence.unlisted-experts.test/expert/trybe-head-of-engineering', 'Head of Engineering at Trybe'),
+    ])))->toBeNull();
+});
+
+it('prefers a result whose domain carries the name over an earlier home page that only has it in the title', function () {
+    $pick = $this->selector->select('TRYBE LTD', collect([
+        hit('https://www.other-reviews.test/', 'Trybe reviews and ratings'),
+        hit('https://www.trybe.test/', 'Spa booking software'),
+    ]));
+
+    expect($pick?->domain)->toBe('trybe.test');
+});
+
+it('accepts a home page whose title names the company when the domain does not', function (string $url) {
+    $pick = $this->selector->select('NATIONAL RESIDENTIAL LANDLORDS ASSOCIATION', collect([hit($url, 'National Residential Landlords Association')]));
+
+    expect($pick?->domain)->toBe('nrla.test');
+})->with(['https://www.nrla.test/', 'https://www.nrla.test', 'https://www.nrla.test/en-gb/', 'https://www.nrla.test/index.html']);
+
+it('blocks the directories found in the first live run', function (string $domain) {
+    expect($this->selector->isBlocked($domain))->toBeTrue();
+})->with(['gbrbusiness.com', 'opengovuk.com', 'checkall.co.uk', 'ukbizdb.co.uk', 'reportingaccounts.com', 'huntukvisasponsors.com', 'intelligence.arbolus.com', 'freehire.me']);
+
 it('rejects results that never mention the company', function () {
     expect($this->selector->select('EXAMPLE DIGITAL LTD', collect([
         hit('https://www.sample-rankings.test/', 'Top 10 web agencies in Manchester'),

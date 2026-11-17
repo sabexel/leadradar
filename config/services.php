@@ -93,6 +93,8 @@ return [
             'companiesintheuk.co.uk', 'bizdb.co.uk', 'companyhouse.co.uk', 'dnb.com', 'bloomberg.com',
             'crunchbase.com', 'zoominfo.com', 'rocketreach.co', 'apollo.io', 'lusha.com', 'cbinsights.com',
             'pitchbook.com', 'owler.com', 'craft.co', 'northdata.com', 'globaldatabase.com', 'thegazette.co.uk',
+            'gbrbusiness.com', 'opengovuk.com', 'checkall.co.uk', 'ukbizdb.co.uk', 'reportingaccounts.com',
+            'huntukvisasponsors.com', 'arbolus.com', 'freehire.me',
             // business listings and reviews
             'yell.com', 'thomsonlocal.com', 'freeindex.co.uk', 'scoot.co.uk', 'cylex-uk.co.uk', 'hotfrog.co.uk',
             'yelp.com', 'yelp.co.uk', 'trustpilot.com', 'checkatrade.com', 'bark.com',

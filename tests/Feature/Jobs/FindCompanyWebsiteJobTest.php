@@ -51,13 +51,13 @@ function runWebsiteJob(Company $company): FindCompanyWebsiteJob
     return $job;
 }
 
-it('queries Brave for the legal name and town, skips directories and stores the real site', function () {
+it('queries Brave for the trading name without "Ltd" or a town, skips directories and stores the real site', function () {
     Http::fake(['api.search.brave.com/res/v1/web/search*' => Http::response(jsonFixture('brave/website-directory-first.json'))]);
     $company = companyNeedingWebsite();
 
     runWebsiteJob($company);
 
-    Http::assertSent(fn (Request $request) => $request['q'] === '"EXAMPLE DIGITAL LTD" Manchester'
+    Http::assertSent(fn (Request $request) => $request['q'] === '"Example Digital"'
         && $request['country'] === 'GB'
         && (int) $request['count'] === 10
         && $request->header('X-Subscription-Token')[0] === 'test-brave-key');

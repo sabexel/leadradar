@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\RetryPipelineStepAction;
 use App\Enums\CompanyType;
+use App\Enums\EmailKind;
 use App\Enums\EmailVerificationStatus;
 use App\Enums\ExternalService;
 use App\Enums\LeadStatus;
@@ -15,6 +16,7 @@ use App\Jobs\Enrichment\FetchCompanyProfileJob;
 use App\Jobs\Sources\FetchReedJobDetailJob;
 use App\Models\ApiUsage;
 use App\Models\Company;
+use App\Models\EmailAddress;
 use App\Models\ScrapeRun;
 use App\Models\Suppression;
 use Carbon\CarbonImmutable;
@@ -288,6 +290,27 @@ it('re-crawls from scratch when retrying the crawl', function () {
     expect($pagesBefore)->toBe(6)
         ->and($company->refresh()->crawledPages()->count())->toBe(6)
         ->and($robotsFetches)->toBe(2) // cached rules were forgotten
+        ->and($company->status)->toBe(LeadStatus::Qualified);
+});
+
+it('forgets everything learned from a wrong website when retrying the website search', function () {
+    fakeWorld();
+    $company = runFromReedAd();
+    $jane = $company->founders()->first();
+
+    // As if the first search had picked a directory site.
+    $company->update(['website' => 'https://www.directory.test', 'domain' => 'directory.test', 'status' => LeadStatus::Rejected, 'reject_reason' => RejectReason::NoValidEmail]);
+    $wrong = EmailAddress::factory()->for($company)->create(['person_id' => $jane->id, 'email' => 'jane@directory.test', 'kind' => EmailKind::Person]);
+    $jane->update(['email_id' => $wrong->id]);
+
+    app(RetryPipelineStepAction::class)->run($company, PipelineStep::FindWebsite);
+    drivePipeline();
+    $company->refresh();
+
+    expect($company->website)->toBe('https://www.example-digital.test')
+        ->and($company->emailAddresses()->where('email', 'like', '%@directory.test')->exists())->toBeFalse()
+        ->and($company->crawledPages()->count())->toBe(6)
+        ->and($jane->refresh()->email->email)->toBe('jane@example-digital.test')
         ->and($company->status)->toBe(LeadStatus::Qualified);
 });
 

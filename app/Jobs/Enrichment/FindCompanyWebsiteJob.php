@@ -60,11 +60,8 @@ final class FindCompanyWebsiteJob implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $name = $company->legal_name ?? $company->name;
-        $town = trim(explode(',', (string) ($company->location ?? ($company->registered_address['locality'] ?? '')))[0]);
-
         [$called, $result] = $this->withinServiceLimits(
-            fn (): ?SearchResult => $brave->findCompanyWebsite($name, $town === '' ? null : $town),
+            fn (): ?SearchResult => $brave->findCompanyWebsite($company->searchName()),
         );
 
         if (! $called) {
