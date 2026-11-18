@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\ImportCompaniesAction;
 use App\Actions\ImportContactedCsvAction;
+use App\Actions\ImportOutreachResultsAction;
 use App\Enums\SuppressionReason;
 use App\Models\Suppression;
 use Illuminate\Http\JsonResponse;
@@ -41,17 +42,21 @@ final class ImportController extends Controller
     /**
      * The file's headers and the auto-detected columns, for the mapping UI.
      */
-    public function preview(Request $request, ImportCompaniesAction $companies, ImportContactedCsvAction $suppressions): JsonResponse
+    public function preview(Request $request, ImportCompaniesAction $companies, ImportContactedCsvAction $suppressions, ImportOutreachResultsAction $outreach): JsonResponse
     {
         $validated = $request->validate([
             'file' => self::FILE_RULES,
-            'type' => ['required', Rule::in(['companies', 'suppressions'])],
+            'type' => ['required', Rule::in(['companies', 'suppressions', 'outreach'])],
         ]);
 
         $path = $this->path($request->file('file'));
 
         try {
-            return response()->json($validated['type'] === 'companies' ? $companies->preview($path) : $suppressions->preview($path));
+            return response()->json(match ($validated['type']) {
+                'companies' => $companies->preview($path),
+                'outreach' => $outreach->preview($path),
+                default => $suppressions->preview($path),
+            });
         } catch (InvalidArgumentException $e) {
             throw ValidationException::withMessages(['file' => $e->getMessage()]);
         }
@@ -119,6 +124,33 @@ final class ImportController extends Controller
             $result->leadsSuppressed,
             $result->leadsSuppressed === 1 ? 'lead' : 'leads',
         )]);
+
+        return back();
+    }
+
+    /**
+     * Mailmeteor results (D105): sent / replied / bounced / unsubscribed back onto the leads.
+     */
+    public function outreach(Request $request, ImportOutreachResultsAction $import): RedirectResponse
+    {
+        $validated = $request->validate([
+            'file' => self::FILE_RULES,
+            'email_column' => ['nullable', 'string', 'max:200'],
+            'status' => ['array'],
+            'status.*' => ['string', 'max:200'],
+        ]);
+
+        $mapping = $request->filled('email_column')
+            ? ['email' => (string) $validated['email_column'], 'status' => array_values($validated['status'] ?? [])]
+            : null;
+
+        try {
+            $result = $import->run($this->path($request->file('file')), $mapping);
+        } catch (InvalidArgumentException $e) {
+            throw ValidationException::withMessages(['file' => $e->getMessage()]);
+        }
+
+        Inertia::flash('toast', ['type' => $result->addresses > 0 ? 'success' : 'warning', 'message' => $result->summary()]);
 
         return back();
     }

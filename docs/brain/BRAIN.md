@@ -8,8 +8,8 @@
 ## Current status
 
 - **Phase:** P3 (deploy) — code done, server setup pending
-- **Last completed task:** P3.2 Failed-jobs daily email + production smoke test checklist; P3.1 `deploy.yml` written
-- **Working on:** P3.1 (server side)
+- **Last completed task:** Mailmeteor results CSV import (D105); before that P3.2 + P3.1 `deploy.yml`
+- **Working on:** new lead source — Companies House search by SIC code + city (owner's choice, 2026-11-18); P3.1 server side waits on the owner
 - **Blocked by:** owner — subdomain + server setup in hPanel, SSH key, GitHub Actions secrets, production `.env`, API keys
 
 ## Next step
@@ -17,6 +17,7 @@
 1. **P3.1 server side** — the code is in place (`.github/workflows/deploy.yml`, README → "Deploy", D100). Remaining: domain is `leads.webwayout.co.uk` and PHP 8.4 is available (D101). Owner: create the subdomain (plus a DNS record in Cloudflare if DNS is managed there), then hPanel PHP 8.4 + extensions, MySQL DB, app folder outside `public_html` with a hand-made production `.env` (README template), document root → `public`, the five `HOSTINGER_*` GitHub secrets + variable `DEPLOY_ENABLED=true` (+ `HOSTINGER_PHP` if the SSH `php` isn't 8.4), first deploy, create the user, the every-minute cron line. Then walk the README "Production smoke test" checklist; P3.1 is ticked when a scheduled run completes and qualified leads appear (docs/10 P3 acceptance).
 2. Local keys are all in and tested; first real run done (run #4, LOG 2026-11-17): 2 qualified after the D102–D104 fixes. Still open: owner to report the Brave plan quota and Adzuna limits (D31); suppression import of the outreach sheet before more runs; decide on the recruiter-text fix (Known issues).
 3. Owner: publish https://webwayout.co.uk/bot (crawler UA points there, docs/09).
+4. **Companies House SIC + city source** (owner chose it to raise volume above the few job-ad companies a day): CH advanced search by SIC (62012/62020/62090/73110…) + location, active companies, own daily cap; read docs/04 + docs/05 first and record a decision. Also: owner to send one real Mailmeteor export (addresses can be faked) to confirm the D105 column values.
 
 ---
 
@@ -177,6 +178,7 @@ Copied from `docs/10-build-plan.md`. Tick `[x]` when the acceptance criteria are
 | D102 | 2026-11-17 | `WebsiteSelector` accepts (1) the first result whose **domain** contains a significant name token, else (2) the first **home page** (path `/`, `/index…`, `/home…`, `/en`, `/en-gb`, no query) whose **title** has a token as a whole word. Snippets no longer count; deep pages never count. The 8 directories from the first live run were added to the blocklist | First live run (run #4): all 8 picks were company-data directories (deep pages titled with the company name), costing 84 MillionVerifier credits on guesses at the wrong domains |
 | D103 | 2026-11-17 | `VerificationPlanner` treats a domain as a dead end (like catch_all, D68) once a fresh result is `invalid` with subresult `dns_error`: no more addresses on it are verified | One answer proves the domain has no mail server; the other guesses were 6+ wasted credits per founder |
 | D104 | 2026-11-17 | Website query = `"{Company::searchName()}"` — trading name without Ltd/Limited/LLP/PLC/UK, quoted, no town (was `"{legal name}" {town}`). `searchName()` is now shared with the LinkedIn query (D71). `RetryPipelineStepAction` from `find_website` also deletes crawled pages, forgets robots.txt, deletes every address on the old domain and clears `laravel_evidence` | Live A/B on 10 companies: "LTD" in the phrase + the job-ad town returned only directories; the plain quoted name put the real site first for all 10. A retry after a wrong site must not keep data learned from it |
+| D105 | 2026-11-18 | Outreach is sent with **Mailmeteor**; its results come back by **CSV import** (Imports → "Mailmeteor results", `ImportOutreachResultsAction`), not an integration. Recipient column + status columns are auto-detected (`Merge status`-style word columns, or event-named columns like "Replied"/"Unsubscribed" counted when filled; no status column = every row sent) and can be overridden. Sent/opened/clicked → `contacted` (first time only); replied → `replied` (not over client / not interested); bounced → that address `invalid` (raw `subresult: bounced, source: mailmeteor`), founder's address re-picked, finished leads rescored, lead stays not contacted; unsubscribed → email suppressed (opted out) + lead not interested (domain suppressed). Recipients matching no lead (by address, else by non-free-mail domain) are suppressed as already contacted. Re-importing is idempotent | Mailmeteor has no public API; Zapier webhooks need a paid plan ($20–30/month) for one user. Exact Mailmeteor column values still to confirm with a real export |
 ## Open questions
 
 - Is Brave Search API's free tier enough for website + LinkedIn lookups at 50 leads/day? P1.6: the API docs don't state plan quotas — owner to check the Brave dashboard; cap stays 150/day until then.

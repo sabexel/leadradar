@@ -9,6 +9,7 @@ use App\Enums\LeadStatus;
 use App\Enums\PipelineOutcome;
 use App\Enums\PipelineStep;
 use App\Enums\RejectReason;
+use App\Models\Company;
 use App\Models\EmailAddress;
 
 /**
@@ -37,16 +38,25 @@ final class ApplyReverificationAction
             $email->person->update(['email_id' => $best?->id]);
         }
 
-        // Only leads the pipeline has finished with are rescored; one still enriching gets scored at its qualify step.
+        $this->rescoreIfFinished($company);
+
+        return $email->refresh();
+    }
+
+    /**
+     * Only leads the pipeline has finished with are rescored; one still enriching gets scored at its qualify step.
+     */
+    public function rescoreIfFinished(Company $company): void
+    {
+        $company->refresh();
+
         $finished = $company->pipeline_step === PipelineStep::Done && (
             $company->status === LeadStatus::Qualified
             || ($company->status === LeadStatus::Rejected && in_array($company->reject_reason, [RejectReason::BelowThreshold, RejectReason::NoValidEmail], true))
         );
 
         if ($finished) {
-            $this->qualify->run($company->refresh());
+            $this->qualify->run($company);
         }
-
-        return $email->refresh();
     }
 }

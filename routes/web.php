@@ -25,6 +25,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('imports/preview', [ImportController::class, 'preview'])->name('imports.preview');
     Route::post('imports/companies', [ImportController::class, 'companies'])->name('imports.companies');
     Route::post('imports/suppressions', [ImportController::class, 'suppressions'])->name('imports.suppressions');
+    Route::post('imports/outreach', [ImportController::class, 'outreach'])->name('imports.outreach');
 
     Route::get('runs', [RunController::class, 'index'])->name('runs.index');
     Route::post('runs/discover', [RunController::class, 'discover'])->middleware('throttle:6,1')->name('runs.discover');

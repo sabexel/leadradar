@@ -1,0 +1,10 @@
+Email,First name,Company,Merge status,Unsubscribed
+founder@lead-one.test,Sam,Lead One,EMAIL_SENT,
+jo@lead-two.test,Jo,Lead Two,Replied,
+old@lead-three.test,Alex,Lead Three,EMAIL_BOUNCED,
+info@lead-four.test,,Lead Four,Email opened,yes
+someone@stranger.test,Pat,Stranger Co,EMAIL_OPENED,
+friend@gmail.com,Lee,Freelance,Email sent,
+later@lead-five.test,Kim,Lead Five,Scheduled,
+hello@lead-six.test,,Lead Six,Clicked,
+,,Empty row,EMAIL_SENT,

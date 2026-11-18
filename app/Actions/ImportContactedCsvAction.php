@@ -31,7 +31,7 @@ final class ImportContactedCsvAction
     /**
      * Free-mail domains never become a domain suppression (an email on them is still suppressed by address).
      */
-    private const FREE_MAIL = [
+    public const FREE_MAIL = [
         'gmail.com', 'googlemail.com', 'outlook.com', 'hotmail.com', 'hotmail.co.uk', 'live.com', 'live.co.uk',
         'msn.com', 'yahoo.com', 'yahoo.co.uk', 'icloud.com', 'me.com', 'aol.com', 'protonmail.com', 'proton.me',
         'btinternet.com', 'sky.com', 'virginmedia.com', 'talktalk.net', 'mail.com', 'gmx.com', 'zoho.com',

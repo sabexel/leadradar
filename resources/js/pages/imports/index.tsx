@@ -20,7 +20,13 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { companies, index, preview, suppressions } from '@/routes/imports';
+import {
+    companies,
+    index,
+    outreach,
+    preview,
+    suppressions,
+} from '@/routes/imports';
 
 type ImportsProps = {
     suppressionCount: number;
@@ -36,6 +42,7 @@ type SuppressionColumns = {
     email: string[];
     company_number: string[];
 };
+type OutreachColumns = { email: string | null; status: string[] };
 
 const NONE = '__none';
 
@@ -44,7 +51,7 @@ const NONE = '__none';
  */
 async function fetchPreview<T>(
     file: File,
-    type: 'companies' | 'suppressions',
+    type: 'companies' | 'suppressions' | 'outreach',
 ): Promise<{ preview?: Preview<T>; error?: string }> {
     const body = new FormData();
     body.append('file', file);
@@ -92,6 +99,7 @@ export default function ImportsIndex({
             <Head title="Imports" />
             <div className="flex h-full flex-1 flex-col gap-4 p-4 lg:max-w-4xl">
                 <CompanyImport maxRows={maxRows} />
+                <OutreachImport />
                 <SuppressionImport count={suppressionCount} reasons={reasons} />
                 <p className="text-xs text-muted-foreground">
                     Uploaded files are read once and discarded — nothing is kept
@@ -318,6 +326,162 @@ function ColumnSelect({
                 </SelectContent>
             </Select>
         </div>
+    );
+}
+
+function OutreachImport() {
+    const [columns, setColumns] = useState<Preview<OutreachColumns> | null>(
+        null,
+    );
+    const [previewError, setPreviewError] = useState<string | null>(null);
+    const form = useForm<{
+        file: File | null;
+        email_column: string;
+        status: string[];
+    }>({ file: null, email_column: '', status: [] });
+
+    const choose = async (file: File | null) => {
+        form.setData('file', file);
+        setColumns(null);
+        setPreviewError(null);
+
+        if (!file) {
+            return;
+        }
+
+        const { preview: result, error } = await fetchPreview<OutreachColumns>(
+            file,
+            'outreach',
+        );
+
+        if (error) {
+            setPreviewError(error);
+
+            return;
+        }
+
+        if (result) {
+            setColumns(result);
+            form.setData((data) => ({
+                ...data,
+                file,
+                email_column: result.detected.email ?? '',
+                status: result.detected.status,
+            }));
+        }
+    };
+
+    const toggle = (header: string) =>
+        form.setData(
+            'status',
+            form.data.status.includes(header)
+                ? form.data.status.filter((h) => h !== header)
+                : [...form.data.status, header],
+        );
+
+    const submit = (event: React.FormEvent) => {
+        event.preventDefault();
+        form.post(outreach.url(), {
+            preserveScroll: true,
+            forceFormData: true,
+            onSuccess: () => {
+                form.reset();
+                setColumns(null);
+            },
+        });
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Mailmeteor results</CardTitle>
+                <CardDescription>
+                    Upload a Mailmeteor export (campaign → Emails → Export, or
+                    your sheet with its "Merge status" columns as CSV). Sent
+                    emails mark leads contacted, replies mark them replied,
+                    bounced addresses are marked invalid, and unsubscribes go on
+                    the do-not-contact list. Addresses that match no lead are
+                    added to the do-not-contact list.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <form onSubmit={submit} className="flex flex-col gap-4">
+                    <div className="grid gap-2 sm:max-w-md">
+                        <Label htmlFor="outreach-csv">CSV file</Label>
+                        <Input
+                            id="outreach-csv"
+                            type="file"
+                            accept=".csv,text/csv"
+                            onChange={(e) =>
+                                void choose(e.target.files?.[0] ?? null)
+                            }
+                        />
+                        <InputError
+                            message={previewError ?? form.errors.file}
+                        />
+                    </div>
+
+                    {columns && (
+                        <div className="flex flex-col gap-3 rounded-lg border p-3">
+                            <p className="text-sm text-muted-foreground">
+                                {columns.rows} rows. Check the columns (with no
+                                status column, every row counts as sent):
+                            </p>
+                            <div className="sm:max-w-xs">
+                                <ColumnSelect
+                                    label="Recipient email column"
+                                    headers={columns.headers}
+                                    value={form.data.email_column}
+                                    onChange={(v) =>
+                                        form.setData('email_column', v)
+                                    }
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label>Status columns</Label>
+                                <div className="flex flex-wrap gap-x-4 gap-y-2">
+                                    {columns.headers
+                                        .filter(
+                                            (h) =>
+                                                h !== '' &&
+                                                h !== form.data.email_column,
+                                        )
+                                        .map((header) => (
+                                            <label
+                                                key={header}
+                                                className="flex items-center gap-2 text-sm"
+                                            >
+                                                <Checkbox
+                                                    checked={form.data.status.includes(
+                                                        header,
+                                                    )}
+                                                    onCheckedChange={() =>
+                                                        toggle(header)
+                                                    }
+                                                />
+                                                {header}
+                                            </label>
+                                        ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div>
+                        <Button
+                            type="submit"
+                            disabled={
+                                form.processing ||
+                                !columns ||
+                                form.data.email_column === ''
+                            }
+                        >
+                            Import results
+                        </Button>
+                    </div>
+                </form>
+            </CardContent>
+        </Card>
     );
 }
 

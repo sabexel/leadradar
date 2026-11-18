@@ -465,3 +465,16 @@
 - Notes / follow-ups: MillionVerifier balance 310 → 204 (43 of the spend came from a queue worker that kept running
   after its PowerShell wrapper was stopped — kill `php.exe` itself). Recruiter-by-page-text fix is a candidate,
   not done. Owner still to report the Brave plan quota and Adzuna limits.
+
+## 2026-11-18 — P2.4+ Mailmeteor results import
+- Done: `ImportOutreachResultsAction` (detect recipient + status columns, map sent/replied/bounced/unsubscribed,
+  match by address then non-free-mail domain, apply via `UpdateOutreachStatusAction`, bounce → invalid + founder
+  address re-picked + rescore), `OutreachImportResult` DTO, `ImportController::outreach` + preview type `outreach`,
+  route `imports.outreach`, "Mailmeteor results" card on the Imports page. `ApplyReverificationAction::rescoreIfFinished()`
+  extracted and shared; `ImportContactedCsvAction::FREE_MAIL` made public.
+- Tests: `tests/Feature/Imports/OutreachImportTest.php` (5: preview detection, all outcomes from one export,
+  idempotent re-import + no backwards moves, no status column = sent, missing columns) with invented fixture
+  `imports/mailmeteor-results.csv`. 582 passing; Pint, Larastan, `tsc`, build clean.
+- Decisions: D105.
+- Notes / follow-ups: confirm Mailmeteor's real column values with one export from the owner. Next: Companies
+  House SIC + city lead source.
