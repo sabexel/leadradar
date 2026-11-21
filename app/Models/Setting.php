@@ -42,6 +42,8 @@ class Setting extends Model
         'source.ch_sic.locations' => ['Manchester', 'Leeds', 'Birmingham', 'Bristol', 'London'],
         'source.ch_sic.min_age_years' => 2,
         // The position per SIC + location is kept in `source.ch_sic.cursor.{sic}|{location}` rows (FetchCompaniesHouseSicJob).
+        // laravel.com/partners (P4.1, D108): one page request per discovery run.
+        'source.laravel_partners.enabled' => true,
     ];
 
     /**

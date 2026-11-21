@@ -51,6 +51,7 @@ final class PipelineSettingsController extends Controller
                     'sic_codes' => array_values((array) Setting::get('source.ch_sic.sic_codes')),
                     'locations' => array_values((array) Setting::get('source.ch_sic.locations')),
                 ],
+                'laravel_partners_enabled' => (bool) Setting::get('source.laravel_partners.enabled'),
             ],
             'services' => array_map(fn (string $service): array => [
                 'value' => $service,
@@ -78,6 +79,7 @@ final class PipelineSettingsController extends Controller
         Setting::put('source.ch_sic.min_age_years', (int) $data['registry_search']['min_age_years']);
         Setting::put('source.ch_sic.sic_codes', array_values($data['registry_search']['sic_codes']));
         Setting::put('source.ch_sic.locations', array_values($data['registry_search']['locations']));
+        Setting::put('source.laravel_partners.enabled', (bool) $data['laravel_partners_enabled']);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Settings saved. Run php artisan leadradar:rescore if you changed the threshold.']);
 

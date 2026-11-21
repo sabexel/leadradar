@@ -74,6 +74,7 @@ final class UpdatePipelineSettingsRequest extends FormRequest
             'registry_search.sic_codes.*' => ['string', 'regex:/^\d{5}$/'],
             'registry_search.locations' => ['array', 'max:20'],
             'registry_search.locations.*' => ['string', 'max:60'],
+            'laravel_partners_enabled' => ['required', 'boolean'],
         ];
     }
 

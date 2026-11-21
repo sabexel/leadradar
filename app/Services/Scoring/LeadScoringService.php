@@ -89,11 +89,13 @@ final class LeadScoringService
     }
 
     /**
-     * ≥ 1 strong signal, or a Laravel job ad from this company.
+     * ≥ 1 strong signal, a Laravel job ad from this company, or a Laravel Partners listing (D108).
      */
     public function hasLaravelEvidence(Company $company): bool
     {
-        return $this->laravelAds($company) !== [] || collect($company->laravel_evidence ?? [])->contains(fn (array $s): bool => ($s['weight'] ?? null) === 'strong');
+        return $this->laravelAds($company) !== []
+            || $this->isListedPartner($company)
+            || collect($company->laravel_evidence ?? [])->contains(fn (array $s): bool => ($s['weight'] ?? null) === 'strong');
     }
 
     /**
@@ -107,7 +109,7 @@ final class LeadScoringService
         return $this->line(2.5, [
             'job_ad' => $this->laravelAds($company) !== [] ? 1.5 : 0.0,
             'site_mention' => $strongMention ? 1.0 : 0.0,
-            'partner' => $types->contains(fn (array $s): bool => $s['type'] === 'laravel_partner') ? 1.0 : 0.0,
+            'partner' => $this->isListedPartner($company) || $types->contains(fn (array $s): bool => $s['type'] === 'laravel_partner') ? 1.0 : 0.0,
             'site_runs_laravel' => $types->contains(fn (array $s): bool => in_array($s['type'], ['runs_laravel', 'livewire', 'inertia'], true)) ? 0.5 : 0.0,
         ]);
     }
@@ -194,6 +196,15 @@ final class LeadScoringService
             ->filter(fn (Signal $s): bool => in_array($s->source, self::JOB_BOARDS, true)
                 && preg_match('/\blaravel\b/i', $s->title.' '.($s->description ?? '')) === 1)
             ->all());
+    }
+
+    /**
+     * Found on laravel.com/partners (P4.1). Kept as a signal, so a website retry that clears the crawl
+     * evidence (D104) does not lose it.
+     */
+    private function isListedPartner(Company $company): bool
+    {
+        return $company->signals->contains(fn (Signal $s): bool => $s->source === SignalSource::LaravelPartners);
     }
 
     /**

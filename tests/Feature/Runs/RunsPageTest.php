@@ -8,6 +8,7 @@ use App\Enums\ScrapeRunStatus;
 use App\Jobs\Sources\FetchReedJobsJob;
 use App\Models\ApiUsage;
 use App\Models\ScrapeRun;
+use App\Models\Setting;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -118,6 +119,7 @@ it('runs discovery now as a manual run', function () {
 
 it('says why discovery could not start', function () {
     config(['services.reed.key' => null, 'services.adzuna.app_id' => null, 'services.adzuna.app_key' => null, 'services.companies_house.key' => null]);
+    Setting::put('source.laravel_partners.enabled', false);
 
     $this->post(route('runs.discover'))
         ->assertInertiaFlash('toast.type', 'warning')

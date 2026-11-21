@@ -323,6 +323,20 @@ it('passes the Laravel gate on a strong signal even without an ad', function () 
     expect(scoreOf($company)->failedGate)->toBeNull();
 });
 
+it('counts a Laravel Partners listing as partner evidence and as passing the Laravel gate', function () {
+    $company = perfectLead();
+    $company->signals()->delete();
+    $company->update(['laravel_evidence' => null]);
+
+    expect(scoreOf($company->refresh())->failedGate)->toBe(RejectReason::NoLaravelEvidence);
+
+    Signal::factory()->for($company)->create(['source' => SignalSource::LaravelPartners, 'title' => 'Laravel Partner (Community)', 'posted_at' => now()]);
+
+    expect(scoreOf($company->refresh())->failedGate)->toBeNull()
+        ->and(line($company, 'laravel_evidence'))->toBe(1.0)
+        ->and(line($company, 'timing'))->toBe(0.0);
+});
+
 it('runs as the last local pipeline step', function () {
     $company = perfectLead();
 

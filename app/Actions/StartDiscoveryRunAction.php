@@ -8,6 +8,7 @@ use App\Enums\RunTrigger;
 use App\Enums\ScrapeRunStatus;
 use App\Jobs\Sources\FetchAdzunaJobsJob;
 use App\Jobs\Sources\FetchCompaniesHouseSicJob;
+use App\Jobs\Sources\FetchLaravelPartnersJob;
 use App\Jobs\Sources\FetchReedJobsJob;
 use App\Models\ScrapeRun;
 use App\Models\Setting;
@@ -110,6 +111,12 @@ final class StartDiscoveryRunAction
                     }
                 }
             }
+        }
+
+        // Laravel Partners directory (P4.1, D108): UK partners only, one page request.
+        if (in_array('GB', $countries, true) && (bool) Setting::get('source.laravel_partners.enabled')) {
+            FetchLaravelPartnersJob::dispatch($run->id);
+            $dispatched[] = 'laravel_partners';
         }
 
         if ($dispatched === []) {

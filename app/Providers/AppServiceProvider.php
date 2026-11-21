@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Enums\ExternalService;
 use App\Services\CompaniesHouse\CompaniesHouseService;
 use App\Services\Crawler\WebsiteCrawlerService;
+use App\Services\Directories\LaravelPartnersService;
 use App\Services\JobBoards\AdzunaService;
 use App\Services\JobBoards\ReedService;
 use App\Services\Search\BraveSearchService;
@@ -32,6 +33,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(BraveSearchService::class);
         $this->app->singleton(WebsiteCrawlerService::class);
         $this->app->singleton(MillionVerifierService::class);
+        $this->app->singleton(LaravelPartnersService::class);
     }
 
     /**

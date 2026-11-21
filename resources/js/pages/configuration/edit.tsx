@@ -11,6 +11,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { edit, test, update } from '@/routes/configuration';
@@ -36,6 +37,7 @@ type Settings = {
         sic_codes: string[];
         locations: string[];
     };
+    laravel_partners_enabled: boolean;
 };
 
 type ConfigurationProps = {
@@ -80,6 +82,7 @@ export default function ConfigurationEdit({
         registry_min_age_years: String(settings.registry_search.min_age_years),
         registry_sic_codes: settings.registry_search.sic_codes.join(', '),
         registry_locations: settings.registry_search.locations.join('\n'),
+        laravel_partners_enabled: settings.laravel_partners_enabled,
     });
 
     const errors = form.errors as Record<string, string | undefined>;
@@ -207,6 +210,20 @@ export default function ConfigurationEdit({
                                     }
                                 />
                             </div>
+                            <label className="flex items-center gap-2 text-sm sm:col-span-2">
+                                <Checkbox
+                                    checked={form.data.laravel_partners_enabled}
+                                    onCheckedChange={(checked) =>
+                                        form.setData(
+                                            'laravel_partners_enabled',
+                                            checked === true,
+                                        )
+                                    }
+                                />
+                                Also check the Laravel Partners directory
+                                (laravel.com/partners) for UK partners on every
+                                run
+                            </label>
                         </CardContent>
                     </Card>
 

@@ -495,3 +495,16 @@
   expected "Nothing to search" now also unset the Companies House key. 596 passing; Pint, Larastan, tsc, build clean.
 - Decisions: D106, D107.
 - Notes / follow-ups: not yet run end to end live — watch reject reasons on the first runs (Known issues).
+
+## 2026-11-21 — P4.1 Laravel Partners directory source
+- Done: owner postponed the Hostinger deploy and started P4 (D108). `LaravelPartnersService` (robots.txt +
+  partners page, crawler UA, Inertia page JSON → `LaravelPartner` DTOs), `FetchLaravelPartnersJob`,
+  `IngestLaravelPartnerAction` (UK filter, create at `registry_search` with known website, or attach the signal to a
+  known company and rescore), dispatched by `StartDiscoveryRunAction` behind `source.laravel_partners.enabled`
+  (Settings → Search checkbox). `LeadScoringService` counts a `laravel_partners` signal as partner evidence and as
+  passing the Laravel gate. Live check: robots.txt allows `/partners`; 66 partners read in one request, 6 UK.
+- Tests: `LaravelPartnersTest` (5: robots then list + UK filter + signal/run counts, idempotent, robots disallow,
+  known/suppressed, missing page data), `LeadScoringTest` (+1), `SchedulerCommandsTest` (+1), settings tests
+  extended; invented fixture `laravel-partners/partners.html`. 603 passing; Pint, Larastan, tsc, build clean.
+- Decisions: D108, D109.
+- Notes / follow-ups: P4.2 needs owner decisions (countries, paid registry APIs) before any code.

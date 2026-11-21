@@ -37,6 +37,7 @@ function validSettings(array $overrides = []): array
             'sic_codes' => ['62012', ' 62020 ', '', '62012'],
             'locations' => ['Leeds', ' York ', ''],
         ],
+        'laravel_partners_enabled' => false,
     ], $overrides);
 }
 
@@ -91,14 +92,16 @@ it('saves cleaned settings', function () {
         ->and(Setting::get('source.ch_sic.per_day'))->toBe(30)
         ->and(Setting::get('source.ch_sic.min_age_years'))->toBe(3)
         ->and(Setting::get('source.ch_sic.sic_codes'))->toBe(['62012', '62020'])
-        ->and(Setting::get('source.ch_sic.locations'))->toBe(['Leeds', 'York']);
+        ->and(Setting::get('source.ch_sic.locations'))->toBe(['Leeds', 'York'])
+        ->and(Setting::get('source.laravel_partners.enabled'))->toBeFalse();
 });
 
 it('shows the Companies House search settings', function () {
     $this->get(route('configuration.edit'))->assertInertia(fn (Assert $page) => $page
         ->where('settings.registry_search.per_day', 25)
         ->where('settings.registry_search.sic_codes', ['62012', '62020', '62090', '73110'])
-        ->where('settings.registry_search.locations', ['Manchester', 'Leeds', 'Birmingham', 'Bristol', 'London']));
+        ->where('settings.registry_search.locations', ['Manchester', 'Leeds', 'Birmingham', 'Bristol', 'London'])
+        ->where('settings.laravel_partners_enabled', true));
 });
 
 it('refuses settings out of range', function (array $overrides, string $field) {

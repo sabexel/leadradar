@@ -120,4 +120,9 @@ return [
         'robots_cache_hours' => 24,
     ],
 
+    // P4.1 (D108): the public partner directory; fetched with the crawler's User-Agent and robots rules.
+    'laravel_partners' => [
+        'url' => 'https://laravel.com/partners',
+    ],
+
 ];

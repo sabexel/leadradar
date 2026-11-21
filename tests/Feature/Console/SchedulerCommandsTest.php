@@ -11,6 +11,7 @@ use App\Enums\ScrapeRunStatus;
 use App\Enums\SignalSource;
 use App\Jobs\Sources\FetchAdzunaJobsJob;
 use App\Jobs\Sources\FetchCompaniesHouseSicJob;
+use App\Jobs\Sources\FetchLaravelPartnersJob;
 use App\Jobs\Sources\FetchReedJobsJob;
 use App\Models\Company;
 use App\Models\EmailAddress;
@@ -87,6 +88,7 @@ it('skips a job board whose key is missing and fails the run when nothing can be
 
     ScrapeRun::query()->update(['status' => ScrapeRunStatus::Finished]);
     config(['services.reed.key' => null, 'services.companies_house.key' => null]);
+    Setting::put('source.laravel_partners.enabled', false);
 
     $this->artisan('leadradar:discover')->expectsOutputToContain('Nothing to search')->assertSuccessful();
 
@@ -117,6 +119,18 @@ it('splits the Companies House search cap over every SIC code and place, in an o
     $first = collect(Queue::pushed(FetchCompaniesHouseSicJob::class))->first();
 
     expect("{$first->sicCode}:{$first->location}")->toBe('62020:Leeds');
+});
+
+it('checks the Laravel Partners directory on every run unless it is turned off', function () {
+    $this->artisan('leadradar:discover')->assertSuccessful();
+    Queue::assertPushed(FetchLaravelPartnersJob::class, fn ($job) => $job->scrapeRunId === ScrapeRun::sole()->id);
+
+    ScrapeRun::query()->update(['status' => ScrapeRunStatus::Finished]);
+    Setting::put('source.laravel_partners.enabled', false);
+    Queue::fake();
+
+    $this->artisan('leadradar:discover')->assertSuccessful();
+    Queue::assertNotPushed(FetchLaravelPartnersJob::class);
 });
 
 it('does not search Companies House when its source is off or today\'s share is used', function () {
