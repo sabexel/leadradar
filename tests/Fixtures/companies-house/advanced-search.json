@@ -1,0 +1,48 @@
+{
+    "etag": "fixture",
+    "hits": 3,
+    "kind": "search#advanced-search",
+    "items": [
+        {
+            "company_name": "EXAMPLE DIGITAL LTD",
+            "company_number": "01234567",
+            "company_status": "active",
+            "company_type": "ltd",
+            "date_of_creation": "2015-02-10",
+            "kind": "search-results#company",
+            "registered_office_address": {
+                "address_line_1": "1 Example Street",
+                "locality": "MANCHESTER",
+                "postal_code": "M1 1AA",
+                "country": "England"
+            },
+            "sic_codes": ["62012", "73110"]
+        },
+        {
+            "company_name": "Sample Software Partners LLP",
+            "company_number": "OC123456",
+            "company_status": "active",
+            "company_type": "llp",
+            "date_of_creation": "2018-06-01",
+            "kind": "search-results#company",
+            "registered_office_address": {
+                "address_line_1": "2 Sample Road",
+                "locality": "Salford",
+                "postal_code": "M5 0AA"
+            },
+            "sic_codes": ["62012"]
+        },
+        {
+            "company_name": "DEMO COMMUNITY TECH",
+            "company_number": "09876543",
+            "company_status": "active",
+            "company_type": "private-limited-guarant-nsc",
+            "date_of_creation": "2019-01-15",
+            "kind": "search-results#company",
+            "registered_office_address": {
+                "locality": "Manchester"
+            },
+            "sic_codes": ["62012"]
+        }
+    ]
+}

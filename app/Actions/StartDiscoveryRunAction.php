@@ -7,10 +7,12 @@ namespace App\Actions;
 use App\Enums\RunTrigger;
 use App\Enums\ScrapeRunStatus;
 use App\Jobs\Sources\FetchAdzunaJobsJob;
+use App\Jobs\Sources\FetchCompaniesHouseSicJob;
 use App\Jobs\Sources\FetchReedJobsJob;
 use App\Models\ScrapeRun;
 use App\Models\Setting;
 use App\Services\Support\DailyTarget;
+use Carbon\CarbonImmutable;
 
 /**
  * Local, sync: start a discovery run (docs/05 "Discovery run"). Used by `leadradar:discover` and, later,
@@ -18,7 +20,10 @@ use App\Services\Support\DailyTarget;
  */
 final class StartDiscoveryRunAction
 {
-    public function __construct(private readonly DailyTarget $target) {}
+    public function __construct(
+        private readonly DailyTarget $target,
+        private readonly IngestRegistryCompanyAction $registry,
+    ) {}
 
     /**
      * @return array{run: ScrapeRun|null, dispatched: list<string>, skipped: list<string>, message: string}
@@ -69,6 +74,41 @@ final class StartDiscoveryRunAction
 
             if (! $adzuna) {
                 $skipped[] = 'adzuna: ADZUNA_APP_ID / ADZUNA_APP_KEY not set';
+            }
+        }
+
+        // Companies House SIC + location (D106): GB registry, own daily cap; 0 turns it off.
+        if (in_array('GB', $countries, true) && (int) Setting::get('source.ch_sic.per_day') > 0) {
+            if (! filled(config('services.companies_house.key'))) {
+                $skipped[] = 'companies house sic: COMPANIES_HOUSE_API_KEY not set';
+            } else {
+                $codes = array_values(array_filter((array) Setting::get('source.ch_sic.sic_codes'), fn (mixed $c): bool => is_string($c) && preg_match('/^\d{5}$/', $c) === 1));
+                $locations = array_values(array_filter(array_map(fn (mixed $l): string => is_string($l) ? trim($l) : '', (array) Setting::get('source.ch_sic.locations'))));
+                $pairs = [];
+
+                foreach ($locations as $location) {
+                    foreach ($codes as $code) {
+                        $pairs[] = [$code, $location];
+                    }
+                }
+
+                $remaining = $this->registry->remainingToday();
+
+                if ($pairs === []) {
+                    $skipped[] = 'companies house sic: no SIC codes or locations set';
+                } elseif ($remaining === 0) {
+                    $skipped[] = "companies house sic: today's cap (source.ch_sic.per_day) already used";
+                } else {
+                    // Each pair gets an equal share of what's left today; the order turns daily so the pairs that
+                    // the cap runs out before are not always the same ones.
+                    $share = (int) ceil($remaining / count($pairs));
+                    $turn = CarbonImmutable::now((string) config('leadradar.timezone', 'Europe/London'))->dayOfYear % count($pairs);
+
+                    foreach ([...array_slice($pairs, $turn), ...array_slice($pairs, 0, $turn)] as [$code, $location]) {
+                        FetchCompaniesHouseSicJob::dispatch($code, $location, $share, 1, $run->id);
+                        $dispatched[] = "companies_house_sic:{$code}:{$location}";
+                    }
+                }
             }
         }
 

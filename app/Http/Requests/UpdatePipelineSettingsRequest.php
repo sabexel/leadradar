@@ -32,9 +32,17 @@ final class UpdatePipelineSettingsRequest extends FormRequest
             return array_values(array_unique($values));
         };
 
+        $registry = $this->input('registry_search');
+        $registry = is_array($registry) ? $registry : [];
+
         $this->merge([
             'keywords' => array_values(array_unique(array_map('mb_strtolower', $clean($this->input('keywords'))))),
             'countries' => array_values(array_unique(array_map('strtoupper', $clean($this->input('countries'))))),
+            'registry_search' => [
+                ...$registry,
+                'sic_codes' => $clean($registry['sic_codes'] ?? []),
+                'locations' => $clean($registry['locations'] ?? []),
+            ],
         ]);
     }
 
@@ -58,6 +66,14 @@ final class UpdatePipelineSettingsRequest extends FormRequest
             // Companies House allows 600 requests per 5 minutes per key.
             'caps.companies_house_per_5min' => ['required', 'integer', 'min:1', 'max:600'],
             'caps.crawler_pages_per_company' => ['required', 'integer', 'min:1', 'max:20'],
+            // Companies House search source (D106); a per_day of 0 turns it off.
+            'registry_search' => ['required', 'array'],
+            'registry_search.per_day' => ['required', 'integer', 'min:0', 'max:200'],
+            'registry_search.min_age_years' => ['required', 'integer', 'min:0', 'max:20'],
+            'registry_search.sic_codes' => ['array', 'max:20'],
+            'registry_search.sic_codes.*' => ['string', 'regex:/^\d{5}$/'],
+            'registry_search.locations' => ['array', 'max:20'],
+            'registry_search.locations.*' => ['string', 'max:60'],
         ];
     }
 
@@ -68,6 +84,7 @@ final class UpdatePipelineSettingsRequest extends FormRequest
     {
         return [
             'countries.*.regex' => 'Countries are two-letter codes such as GB.',
+            'registry_search.sic_codes.*.regex' => 'SIC codes are five digits, such as 62012.',
         ];
     }
 }

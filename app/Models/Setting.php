@@ -36,6 +36,12 @@ class Setting extends Model
         'search.keywords' => ['laravel'],
         'search.countries' => ['GB'],
         'signal.max_age_days' => 30,
+        // Companies House advanced search source (D106). New companies per London day; 0 turns the source off.
+        'source.ch_sic.per_day' => 25,
+        'source.ch_sic.sic_codes' => ['62012', '62020', '62090', '73110'],
+        'source.ch_sic.locations' => ['Manchester', 'Leeds', 'Birmingham', 'Bristol', 'London'],
+        'source.ch_sic.min_age_years' => 2,
+        // The position per SIC + location is kept in `source.ch_sic.cursor.{sic}|{location}` rows (FetchCompaniesHouseSicJob).
     ];
 
     /**

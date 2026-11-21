@@ -8,12 +8,15 @@ use App\Enums\PipelineStep;
 use App\Enums\RejectReason;
 use App\Enums\RunTrigger;
 use App\Enums\ScrapeRunStatus;
+use App\Enums\SignalSource;
 use App\Jobs\Sources\FetchAdzunaJobsJob;
+use App\Jobs\Sources\FetchCompaniesHouseSicJob;
 use App\Jobs\Sources\FetchReedJobsJob;
 use App\Models\Company;
 use App\Models\EmailAddress;
 use App\Models\ScrapeRun;
 use App\Models\Setting;
+use App\Models\Signal;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Scheduling\Event;
 use Illuminate\Console\Scheduling\Schedule;
@@ -83,11 +86,52 @@ it('skips a job board whose key is missing and fails the run when nothing can be
     Queue::assertNotPushed(FetchAdzunaJobsJob::class);
 
     ScrapeRun::query()->update(['status' => ScrapeRunStatus::Finished]);
-    config(['services.reed.key' => null]);
+    config(['services.reed.key' => null, 'services.companies_house.key' => null]);
 
     $this->artisan('leadradar:discover')->expectsOutputToContain('Nothing to search')->assertSuccessful();
 
     expect(ScrapeRun::latest('id')->first()->status)->toBe(ScrapeRunStatus::Failed);
+});
+
+it('splits the Companies House search cap over every SIC code and place, in an order that turns daily', function () {
+    config(['services.companies_house.key' => 'test-ch-key']);
+    Setting::put('source.ch_sic.per_day', 10);
+    Setting::put('source.ch_sic.sic_codes', ['62012', '62020']);
+    Setting::put('source.ch_sic.locations', ['Leeds', ' York ']);
+
+    $this->artisan('leadradar:discover')->assertSuccessful();
+
+    $run = ScrapeRun::sole();
+    $pairs = collect(Queue::pushed(FetchCompaniesHouseSicJob::class))->map(fn ($job) => "{$job->sicCode}:{$job->location}")->all();
+
+    // 2026-11-04 is day 308; 308 % 4 = 0 → today starts with the first pair.
+    expect($pairs)->toBe(['62012:Leeds', '62020:Leeds', '62012:York', '62020:York']);
+    Queue::assertPushed(FetchCompaniesHouseSicJob::class, fn ($job) => $job->take === 3 && $job->page === 1 && $job->scrapeRunId === $run->id);
+
+    ScrapeRun::query()->update(['status' => ScrapeRunStatus::Finished]);
+    CarbonImmutable::setTestNow('2026-11-05 06:10:00');
+    Queue::fake();
+
+    $this->artisan('leadradar:discover')->assertSuccessful();
+
+    $first = collect(Queue::pushed(FetchCompaniesHouseSicJob::class))->first();
+
+    expect("{$first->sicCode}:{$first->location}")->toBe('62020:Leeds');
+});
+
+it('does not search Companies House when its source is off or today\'s share is used', function () {
+    config(['services.companies_house.key' => 'test-ch-key']);
+    Setting::put('source.ch_sic.per_day', 0);
+
+    $this->artisan('leadradar:discover')->assertSuccessful();
+    Queue::assertNotPushed(FetchCompaniesHouseSicJob::class);
+
+    ScrapeRun::query()->update(['status' => ScrapeRunStatus::Finished]);
+    Setting::put('source.ch_sic.per_day', 1);
+    Signal::factory()->create(['source' => SignalSource::CompaniesHouseSic]);
+
+    $this->artisan('leadradar:discover')->expectsOutputToContain("today's cap")->assertSuccessful();
+    Queue::assertNotPushed(FetchCompaniesHouseSicJob::class);
 });
 
 it('never searches outside the UK boards\' country', function () {

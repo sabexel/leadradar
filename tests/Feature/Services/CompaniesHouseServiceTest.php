@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Enums\ExternalService;
 use App\Models\ApiUsage;
 use App\Services\CompaniesHouse\CompaniesHouseService;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 
@@ -96,6 +97,42 @@ it('parses officer names', function (string $raw, string $first, string $last) {
     ['SAMPLE, Pat, Dr', 'Pat', 'Sample'],
     ['EXAMPLE SECRETARIES LIMITED', '', 'Example Secretaries Limited'],
 ]);
+
+it('runs an advanced search for one SIC code in one place and maps the companies', function () {
+    Http::fake(['api.company-information.service.gov.uk/advanced-search/companies*' => Http::response(jsonFixture('companies-house/advanced-search.json'))]);
+
+    $page = app(CompaniesHouseService::class)->advancedSearch('62012', 'Manchester', 100, 50, CarbonImmutable::parse('2024-11-04'));
+
+    Http::assertSent(fn (Request $request) => $request['sic_codes'] === '62012'
+        && $request['location'] === 'Manchester'
+        && $request['company_status'] === 'active'
+        && $request['incorporated_to'] === '2024-11-04'
+        && (int) $request['size'] === 50
+        && (int) $request['start_index'] === 100);
+
+    $first = $page->companies->first();
+
+    expect($page->hits)->toBe(3)
+        ->and($page->companies)->toHaveCount(3)
+        ->and($first->number)->toBe('01234567')
+        ->and($first->name)->toBe('EXAMPLE DIGITAL LTD')
+        ->and($first->type)->toBe('ltd')
+        ->and($first->sicCodes)->toBe(['62012', '73110'])
+        ->and($first->locality)->toBe('MANCHESTER')
+        ->and($first->registeredAddress['postal_code'])->toBe('M1 1AA')
+        ->and($first->dateOfCreation?->toDateString())->toBe('2015-02-10')
+        ->and(ApiUsage::sole()->endpoint)->toBe('/advanced-search/companies');
+});
+
+it('treats an advanced search 404 as no matches and leaves out the age filter when none is given', function () {
+    Http::fake(['*' => Http::response(['errors' => [['error' => 'no-results']]], 404)]);
+
+    $page = app(CompaniesHouseService::class)->advancedSearch('62012', 'Nowhere');
+
+    Http::assertSent(fn (Request $request) => ! str_contains($request->url(), 'incorporated_to'));
+
+    expect($page->hits)->toBe(0)->and($page->companies)->toBeEmpty();
+});
 
 it('logs usage against companies_house', function () {
     Http::fake(['*' => Http::response(jsonFixture('companies-house/search-none.json'))]);

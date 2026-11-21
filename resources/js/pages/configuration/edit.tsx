@@ -30,6 +30,12 @@ type Settings = {
     keywords: string[];
     countries: string[];
     caps: Caps;
+    registry_search: {
+        per_day: number;
+        min_age_years: number;
+        sic_codes: string[];
+        locations: string[];
+    };
 };
 
 type ConfigurationProps = {
@@ -70,17 +76,35 @@ export default function ConfigurationEdit({
         caps: Object.fromEntries(
             Object.entries(settings.caps).map(([k, v]) => [k, String(v)]),
         ) as Record<keyof Caps, string>,
+        registry_per_day: String(settings.registry_search.per_day),
+        registry_min_age_years: String(settings.registry_search.min_age_years),
+        registry_sic_codes: settings.registry_search.sic_codes.join(', '),
+        registry_locations: settings.registry_search.locations.join('\n'),
     });
 
     const errors = form.errors as Record<string, string | undefined>;
 
     const submit = (event: React.FormEvent) => {
         event.preventDefault();
-        form.transform((data) => ({
-            ...data,
-            keywords: data.keywords.split('\n'),
-            countries: data.countries.split(/[\s,]+/),
-        }));
+        form.transform(
+            ({
+                registry_per_day,
+                registry_min_age_years,
+                registry_sic_codes,
+                registry_locations,
+                ...data
+            }) => ({
+                ...data,
+                keywords: data.keywords.split('\n'),
+                countries: data.countries.split(/[\s,]+/),
+                registry_search: {
+                    per_day: registry_per_day,
+                    min_age_years: registry_min_age_years,
+                    sic_codes: registry_sic_codes.split(/[\s,]+/),
+                    locations: registry_locations.split('\n'),
+                },
+            }),
+        );
         form.put(update.url(), { preserveScroll: true });
     };
 
@@ -180,6 +204,95 @@ export default function ConfigurationEdit({
                                     message={
                                         errors.countries ??
                                         firstNested(errors, 'countries.')
+                                    }
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Companies House search</CardTitle>
+                            <CardDescription>
+                                Every discovery run also takes active companies
+                                registered under these SIC codes in these places
+                                (one per line), and continues the next day where
+                                it stopped. They have no job ad, so they qualify
+                                only with Laravel evidence on their website. 0
+                                per day turns this source off.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="grid gap-4 sm:grid-cols-2">
+                            <NumberField
+                                id="registry_search.per_day"
+                                label="New companies per day"
+                                value={form.data.registry_per_day}
+                                onChange={(v) =>
+                                    form.setData('registry_per_day', v)
+                                }
+                                error={errors['registry_search.per_day']}
+                                min={0}
+                                max={200}
+                            />
+                            <NumberField
+                                id="registry_search.min_age_years"
+                                label="Minimum company age (years)"
+                                value={form.data.registry_min_age_years}
+                                onChange={(v) =>
+                                    form.setData('registry_min_age_years', v)
+                                }
+                                error={errors['registry_search.min_age_years']}
+                                min={0}
+                                max={20}
+                            />
+                            <div className="grid content-start gap-2">
+                                <Label htmlFor="registry_sic_codes">
+                                    SIC codes
+                                </Label>
+                                <Input
+                                    id="registry_sic_codes"
+                                    value={form.data.registry_sic_codes}
+                                    onChange={(e) =>
+                                        form.setData(
+                                            'registry_sic_codes',
+                                            e.target.value,
+                                        )
+                                    }
+                                    placeholder="62012, 62020"
+                                />
+                                <InputError
+                                    message={
+                                        errors['registry_search.sic_codes'] ??
+                                        firstNested(
+                                            errors,
+                                            'registry_search.sic_codes.',
+                                        )
+                                    }
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="registry_locations">
+                                    Places
+                                </Label>
+                                <textarea
+                                    id="registry_locations"
+                                    rows={4}
+                                    value={form.data.registry_locations}
+                                    onChange={(e) =>
+                                        form.setData(
+                                            'registry_locations',
+                                            e.target.value,
+                                        )
+                                    }
+                                    className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                />
+                                <InputError
+                                    message={
+                                        errors['registry_search.locations'] ??
+                                        firstNested(
+                                            errors,
+                                            'registry_search.locations.',
+                                        )
                                     }
                                 />
                             </div>

@@ -11,11 +11,13 @@ use App\Enums\EmailKind;
 use App\Enums\EmailOrigin;
 use App\Enums\PipelineOutcome;
 use App\Enums\PipelineStep;
+use App\Enums\RejectReason;
 use App\Enums\SignalWeight;
 use App\Models\Company;
 use App\Models\CrawledPage;
 use App\Models\EmailAddress;
 use App\Models\Person;
+use App\Services\Scoring\LeadScoringService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -26,7 +28,10 @@ use Illuminate\Support\Str;
  */
 final class ApplyCrawlResultAction
 {
-    public function __construct(private readonly ClassifyCompanyAction $classify) {}
+    public function __construct(
+        private readonly ClassifyCompanyAction $classify,
+        private readonly LeadScoringService $scoring,
+    ) {}
 
     public function apply(Company $company, CrawlResult $result): CrawledPage
     {
@@ -92,9 +97,20 @@ final class ApplyCrawlResultAction
         // Second classification pass with website evidence (docs/05: offshore → rejected).
         $this->classify->run($company, $terms === [] ? [] : [implode('; ', $terms)], $offshore);
 
-        if (! $company->isFinished()) {
-            $company->update(['pipeline_step' => PipelineStep::BuildEmailCandidates]);
+        if ($company->isFinished()) {
+            return $company;
         }
+
+        // The Laravel gate (docs/06) can't change after the crawl — no later step adds evidence — so a company
+        // without it stops here, before any MillionVerifier or Brave credit is spent on its people (D107).
+        if (! $this->scoring->hasLaravelEvidence($company->refresh())) {
+            $company->update(['pipeline_step' => PipelineStep::Done]);
+            $company->reject(RejectReason::NoLaravelEvidence, 'No Laravel evidence on the site or in a job ad — stopped before email checks');
+
+            return $company;
+        }
+
+        $company->update(['pipeline_step' => PipelineStep::BuildEmailCandidates]);
 
         return $company;
     }

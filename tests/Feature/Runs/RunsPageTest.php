@@ -117,9 +117,9 @@ it('runs discovery now as a manual run', function () {
 });
 
 it('says why discovery could not start', function () {
-    config(['services.reed.key' => null, 'services.adzuna.app_id' => null, 'services.adzuna.app_key' => null]);
+    config(['services.reed.key' => null, 'services.adzuna.app_id' => null, 'services.adzuna.app_key' => null, 'services.companies_house.key' => null]);
 
     $this->post(route('runs.discover'))
         ->assertInertiaFlash('toast.type', 'warning')
-        ->assertInertiaFlash('toast.message', 'Nothing to search: check keys, search.keywords and search.countries. Skipped: reed: REED_API_KEY not set; adzuna: ADZUNA_APP_ID / ADZUNA_APP_KEY not set.');
+        ->assertInertiaFlash('toast.message', 'Nothing to search: check keys, search.keywords and search.countries. Skipped: reed: REED_API_KEY not set; adzuna: ADZUNA_APP_ID / ADZUNA_APP_KEY not set; companies house sic: COMPANIES_HOUSE_API_KEY not set.');
 });

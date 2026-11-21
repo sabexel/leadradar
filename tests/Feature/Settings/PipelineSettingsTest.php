@@ -31,6 +31,12 @@ function validSettings(array $overrides = []): array
             'companies_house_per_5min' => 450,
             'crawler_pages_per_company' => 5,
         ],
+        'registry_search' => [
+            'per_day' => 30,
+            'min_age_years' => 3,
+            'sic_codes' => ['62012', ' 62020 ', '', '62012'],
+            'locations' => ['Leeds', ' York ', ''],
+        ],
     ], $overrides);
 }
 
@@ -81,7 +87,18 @@ it('saves cleaned settings', function () {
         ->and(Setting::get('search.countries'))->toBe(['GB'])
         ->and(Setting::get('cap.millionverifier.per_day'))->toBe(120)
         ->and(Setting::get('cap.companies_house.per_5min'))->toBe(450)
-        ->and(Setting::get('cap.crawler.pages_per_company'))->toBe(5);
+        ->and(Setting::get('cap.crawler.pages_per_company'))->toBe(5)
+        ->and(Setting::get('source.ch_sic.per_day'))->toBe(30)
+        ->and(Setting::get('source.ch_sic.min_age_years'))->toBe(3)
+        ->and(Setting::get('source.ch_sic.sic_codes'))->toBe(['62012', '62020'])
+        ->and(Setting::get('source.ch_sic.locations'))->toBe(['Leeds', 'York']);
+});
+
+it('shows the Companies House search settings', function () {
+    $this->get(route('configuration.edit'))->assertInertia(fn (Assert $page) => $page
+        ->where('settings.registry_search.per_day', 25)
+        ->where('settings.registry_search.sic_codes', ['62012', '62020', '62090', '73110'])
+        ->where('settings.registry_search.locations', ['Manchester', 'Leeds', 'Birmingham', 'Bristol', 'London']));
 });
 
 it('refuses settings out of range', function (array $overrides, string $field) {
@@ -101,6 +118,8 @@ it('refuses settings out of range', function (array $overrides, string $field) {
     'CH over its limit' => [['caps' => ['companies_house_per_5min' => 601]], 'caps.companies_house_per_5min'],
     'negative cap' => [['caps' => ['brave_per_day' => -1]], 'caps.brave_per_day'],
     'signal age 0' => [['signal_max_age_days' => 0], 'signal_max_age_days'],
+    'bad SIC code' => [['registry_search' => ['sic_codes' => ['6201']]], 'registry_search.sic_codes.0'],
+    'negative registry cap' => [['registry_search' => ['per_day' => -1]], 'registry_search.per_day'],
 ]);
 
 // --- Test connection --------------------------------------------------------------------

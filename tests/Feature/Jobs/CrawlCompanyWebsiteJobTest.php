@@ -222,7 +222,21 @@ it('skips the whole site when robots.txt disallows the home page', function () {
     expect(requestedUrls())->toBe([SITE.'/robots.txt'])
         ->and($company->crawledPages()->sole()->extracted['skipped'])->toBe('robots')
         ->and($company->pipelineEvents()->where('step', PipelineStep::Crawl)->where('outcome', PipelineOutcome::Skipped)->sole()->message)->toContain('robots.txt')
-        ->and($company->pipeline_step)->toBe(PipelineStep::VerifyEmails); // crawl → build_email_candidates (local) → verify_emails
+        // Nothing read and no job ad → no Laravel evidence: rejected before any address is verified (D107).
+        ->and($company->pipeline_step)->toBe(PipelineStep::Done)
+        ->and($company->reject_reason)->toBe(RejectReason::NoLaravelEvidence)
+        ->and($company->emailAddresses()->count())->toBe(0);
+});
+
+it('goes on to the email checks after the crawl when a Laravel job ad is the evidence', function () {
+    fakeSite(robots: 'robots/block-all.txt');
+    $company = companyToCrawl();
+    Signal::factory()->for($company)->create(['title' => 'Laravel Developer']);
+
+    crawlAll($company);
+
+    expect($company->refresh()->pipeline_step)->toBe(PipelineStep::VerifyEmails) // crawl → build_email_candidates (local) → verify_emails
+        ->and($company->status)->toBe(LeadStatus::Enriching);
 });
 
 it('obeys rules addressed to LeadRadarBot and its Crawl-delay', function () {

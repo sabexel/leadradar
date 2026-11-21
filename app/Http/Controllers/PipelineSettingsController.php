@@ -45,6 +45,12 @@ final class PipelineSettingsController extends Controller
                 'keywords' => array_values((array) Setting::get('search.keywords')),
                 'countries' => array_values((array) Setting::get('search.countries')),
                 'caps' => $caps,
+                'registry_search' => [
+                    'per_day' => (int) Setting::get('source.ch_sic.per_day'),
+                    'min_age_years' => (int) Setting::get('source.ch_sic.min_age_years'),
+                    'sic_codes' => array_values((array) Setting::get('source.ch_sic.sic_codes')),
+                    'locations' => array_values((array) Setting::get('source.ch_sic.locations')),
+                ],
             ],
             'services' => array_map(fn (string $service): array => [
                 'value' => $service,
@@ -67,6 +73,11 @@ final class PipelineSettingsController extends Controller
         foreach (self::CAPS as $field => $key) {
             Setting::put($key, (int) $data['caps'][$field]);
         }
+
+        Setting::put('source.ch_sic.per_day', (int) $data['registry_search']['per_day']);
+        Setting::put('source.ch_sic.min_age_years', (int) $data['registry_search']['min_age_years']);
+        Setting::put('source.ch_sic.sic_codes', array_values($data['registry_search']['sic_codes']));
+        Setting::put('source.ch_sic.locations', array_values($data['registry_search']['locations']));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Settings saved. Run php artisan leadradar:rescore if you changed the threshold.']);
 

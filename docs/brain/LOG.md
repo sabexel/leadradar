@@ -478,3 +478,20 @@
 - Decisions: D105.
 - Notes / follow-ups: confirm Mailmeteor's real column values with one export from the owner. Next: Companies
   House SIC + city lead source.
+
+## 2026-11-21 — SRC Companies House SIC + place lead source; early stop without Laravel evidence
+- Done: `CompaniesHouseService::advancedSearch()` + DTOs `RegistryCompany`, `RegistrySearchPage`;
+  `FetchCompaniesHouseSicJob` (per-pair share of the cap, cursor per SIC + place, next page while the share is
+  unused); `IngestRegistryCompanyAction`; `SignalSource::CompaniesHouseSic`; settings `source.ch_sic.*` + a
+  "Companies House search" card on the Settings page; `StartDiscoveryRunAction` dispatches one job per pair with
+  an even share, order rotating daily. `ApplyCrawlResultAction::finish()` rejects `no_laravel_evidence` right
+  after the crawl (D107). An uncommitted draft of this work (2026-11-19) was found and finished. Live check of
+  the advanced search: params and fields as implemented; paging works. Owner's past-outreach Google Sheet
+  imported into the local DB as suppressions (37 domains, 103 emails, 29 company numbers; data not in the repo).
+- Tests: `FetchCompaniesHouseSicJobTest` (6), `CompaniesHouseServiceTest` (+2, fixture
+  `companies-house/advanced-search.json`, invented), `SchedulerCommandsTest` (+2: share + daily rotation, off /
+  cap used), `PipelineSettingsTest` (+1 and 2 validation cases), `CrawlCompanyWebsiteJobTest` (robots-blocked
+  company without evidence now rejected; +1: a Laravel job ad still goes on to verification). Two tests that
+  expected "Nothing to search" now also unset the Companies House key. 596 passing; Pint, Larastan, tsc, build clean.
+- Decisions: D106, D107.
+- Notes / follow-ups: not yet run end to end live — watch reject reasons on the first runs (Known issues).

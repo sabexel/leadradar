@@ -7,6 +7,8 @@ namespace App\Services\CompaniesHouse;
 use App\DTOs\CompaniesHouse\CompanyProfile;
 use App\DTOs\CompaniesHouse\CompanySearchResult;
 use App\DTOs\CompaniesHouse\Officer;
+use App\DTOs\CompaniesHouse\RegistryCompany;
+use App\DTOs\CompaniesHouse\RegistrySearchPage;
 use App\Enums\ExternalService;
 use App\Services\Support\ExternalApiService;
 use Carbon\CarbonImmutable;
@@ -70,6 +72,65 @@ final class CompaniesHouseService extends ExternalApiService
             })
             ->filter()
             ->values();
+    }
+
+    /**
+     * Advanced search: active companies with one SIC code whose registered office matches a location (D106).
+     * One SIC code per call — the API's list encoding is not relied on. A 404 means "no matches".
+     */
+    public function advancedSearch(string $sicCode, string $location, int $startIndex = 0, int $size = 50, ?CarbonImmutable $incorporatedTo = null): RegistrySearchPage
+    {
+        $query = array_filter([
+            'sic_codes' => $sicCode,
+            'location' => $location,
+            'company_status' => 'active',
+            'incorporated_to' => $incorporatedTo?->toDateString(),
+            'size' => min(5000, max(1, $size)),
+            'start_index' => max(0, $startIndex),
+        ], fn (mixed $value): bool => $value !== null);
+
+        $response = $this->get('/advanced-search/companies', $query, '/advanced-search/companies', allowNotFound: true);
+
+        if ($response->notFound()) {
+            return new RegistrySearchPage(collect(), 0);
+        }
+
+        $data = $this->json($response, '/advanced-search/companies');
+
+        $companies = collect(is_array($data['items'] ?? null) ? $data['items'] : [])
+            ->filter(fn (mixed $item): bool => is_array($item))
+            ->map(function (array $item): ?RegistryCompany {
+                $number = $this->text($item['company_number'] ?? null);
+                $name = $this->text($item['company_name'] ?? null);
+
+                if ($number === null || $name === null) {
+                    return null;
+                }
+
+                $address = collect(is_array($item['registered_office_address'] ?? null) ? $item['registered_office_address'] : [])
+                    ->only(['premises', 'address_line_1', 'address_line_2', 'locality', 'region', 'postal_code', 'country'])
+                    ->map(fn (mixed $value): ?string => $this->text($value))
+                    ->filter()
+                    ->all();
+
+                return new RegistryCompany(
+                    number: $number,
+                    name: $name,
+                    status: $this->text($item['company_status'] ?? null),
+                    type: $this->text($item['company_type'] ?? null),
+                    sicCodes: array_values(array_filter(
+                        is_array($item['sic_codes'] ?? null) ? $item['sic_codes'] : [],
+                        fn (mixed $code): bool => is_string($code) && $code !== '',
+                    )),
+                    dateOfCreation: $this->date($item['date_of_creation'] ?? null),
+                    locality: $address['locality'] ?? null,
+                    registeredAddress: $address,
+                );
+            })
+            ->filter()
+            ->values();
+
+        return new RegistrySearchPage($companies, is_numeric($data['hits'] ?? null) ? (int) $data['hits'] : $companies->count());
     }
 
     /**
