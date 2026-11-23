@@ -37,6 +37,29 @@ final class GooglePlacesService extends ExternalApiService
     }
 
     /**
+     * Agencies in a city (D128): one Text Search page for e.g. "shopify agency in Toronto", region-biased to the
+     * country. Only places with a website, at or above the rating and review filters, are returned.
+     */
+    public function searchAgencies(string $phrase, string $city, string $country, float $minRating = 0.0, int $minReviews = 0): PlaceSearchPage
+    {
+        $data = $this->json($this->post('/v1/places:searchText', [
+            'textQuery' => trim("{$phrase} in {$city}"),
+            'regionCode' => strtoupper($country),
+            'languageCode' => 'en',
+            'pageSize' => 20,
+            'minRating' => max(0.0, min(5.0, $minRating)),
+        ], 'places:searchText'), 'places:searchText');
+
+        $places = collect(is_array($data['places'] ?? null) ? $data['places'] : [])
+            ->filter(fn (mixed $item): bool => is_array($item))
+            ->map(fn (array $item): ?PlaceLead => $this->mapPlace($item, withWebsite: true))
+            ->filter(fn (?PlaceLead $p): bool => $p !== null && $p->reviewCount >= $minReviews)
+            ->values();
+
+        return new PlaceSearchPage($places, null);
+    }
+
+    /**
      * One Text Search page for a business type in a city. Callers filter "no website + min reviews".
      */
     public function searchText(string $city, string $includedType, ?string $pageToken = null): PlaceSearchPage
@@ -67,7 +90,7 @@ final class GooglePlacesService extends ExternalApiService
     /**
      * @param  array<string, mixed>  $item
      */
-    private function mapPlace(array $item): ?PlaceLead
+    private function mapPlace(array $item, bool $withWebsite = false): ?PlaceLead
     {
         $id = is_string($item['id'] ?? null) ? Str::after($item['id'], 'places/') : null;
         $id = ($id === null || $id === '') && is_string($item['id'] ?? null) ? $item['id'] : $id;
@@ -79,8 +102,10 @@ final class GooglePlacesService extends ExternalApiService
             return null;
         }
 
-        // Already has a site — not a "needs a website" lead.
-        if (filled($item['websiteUri'] ?? null)) {
+        $website = is_string($item['websiteUri'] ?? null) && $item['websiteUri'] !== '' ? $item['websiteUri'] : null;
+
+        // "Needs a website" leads have none; agency leads (D128) must have one.
+        if ($withWebsite ? $website === null : $website !== null) {
             return null;
         }
 
@@ -104,6 +129,7 @@ final class GooglePlacesService extends ExternalApiService
             reviewCount: is_numeric($item['userRatingCount'] ?? null) ? (int) $item['userRatingCount'] : 0,
             types: $types,
             mapsUrl: is_string($item['googleMapsUri'] ?? null) ? $item['googleMapsUri'] : null,
+            website: $website,
         );
     }
 

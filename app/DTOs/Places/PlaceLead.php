@@ -22,5 +22,6 @@ final readonly class PlaceLead
         public int $reviewCount,
         public array $types,
         public ?string $mapsUrl,
+        public ?string $website = null,
     ) {}
 }

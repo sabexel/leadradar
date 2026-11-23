@@ -50,6 +50,9 @@ type Settings = {
         business_queries_per_day: number;
         business_threshold: number;
         business_countries: string[];
+        places_enabled: boolean;
+        places_min_rating: number;
+        places_min_reviews: number;
     };
     website_places: {
         per_day: number;
@@ -121,6 +124,9 @@ export default function ConfigurationEdit({
         ),
         business_threshold: String(settings.agency.business_threshold),
         business_countries: settings.agency.business_countries.join(', '),
+        places_agency_enabled: settings.agency.places_enabled,
+        places_agency_min_rating: String(settings.agency.places_min_rating),
+        places_agency_min_reviews: String(settings.agency.places_min_reviews),
     });
 
     const errors = form.errors as Record<string, string | undefined>;
@@ -156,6 +162,9 @@ export default function ConfigurationEdit({
                 business_queries_per_day,
                 business_threshold,
                 business_countries,
+                places_agency_enabled,
+                places_agency_min_rating,
+                places_agency_min_reviews,
                 ...data
             }) => ({
                 ...data,
@@ -171,6 +180,9 @@ export default function ConfigurationEdit({
                     business_queries_per_day,
                     business_threshold,
                     business_countries: business_countries.split(/[\s,]+/),
+                    places_enabled: places_agency_enabled,
+                    places_min_rating: places_agency_min_rating,
+                    places_min_reviews: places_agency_min_reviews,
                 },
                 keywords: data.keywords.split('\n'),
                 countries: data.countries.split(/[\s,]+/),
@@ -320,6 +332,46 @@ export default function ConfigurationEdit({
                                     )}
                                 />
                             </div>
+                            <div className="grid gap-2 sm:col-span-3">
+                                <label className="flex items-center gap-2 text-sm font-medium">
+                                    <Checkbox
+                                        checked={
+                                            form.data.places_agency_enabled
+                                        }
+                                        onCheckedChange={(checked) =>
+                                            form.setData(
+                                                'places_agency_enabled',
+                                                checked === true,
+                                            )
+                                        }
+                                    />
+                                    Also search Google Places for agencies
+                                    (needs GOOGLE_PLACES_API_KEY)
+                                </label>
+                            </div>
+                            <NumberField
+                                id="agency.places_min_rating"
+                                label="Places: minimum rating (0–5)"
+                                value={form.data.places_agency_min_rating}
+                                onChange={(v) =>
+                                    form.setData('places_agency_min_rating', v)
+                                }
+                                error={errors['agency.places_min_rating']}
+                                min={0}
+                                max={5}
+                                step={0.1}
+                            />
+                            <NumberField
+                                id="agency.places_min_reviews"
+                                label="Places: minimum reviews"
+                                value={form.data.places_agency_min_reviews}
+                                onChange={(v) =>
+                                    form.setData('places_agency_min_reviews', v)
+                                }
+                                error={errors['agency.places_min_reviews']}
+                                min={0}
+                                max={1000}
+                            />
                             <div className="grid gap-2 sm:col-span-3">
                                 <p className="text-sm font-medium">
                                     Businesses that need agency services (UAE

@@ -1,0 +1,8 @@
+{
+    "places": [
+        { "id": "places/a1", "displayName": { "text": "Maple Pixel Studio" }, "formattedAddress": "1 King St W, Toronto, ON, Canada", "websiteUri": "https://www.maplepixel.example.ca/", "rating": 4.8, "userRatingCount": 42, "types": ["marketing_agency"] },
+        { "id": "places/a2", "displayName": { "text": "Tiny New Agency" }, "formattedAddress": "2 Queen St, Toronto, ON, Canada", "websiteUri": "https://tiny.example.ca/", "rating": 5.0, "userRatingCount": 2, "types": [] },
+        { "id": "places/a3", "displayName": { "text": "No Site Studio" }, "formattedAddress": "3 Bay St, Toronto, ON, Canada", "rating": 4.6, "userRatingCount": 30, "types": [] },
+        { "id": "places/a4", "displayName": { "text": "Facebook Only" }, "formattedAddress": "4 Bay St, Toronto, ON, Canada", "websiteUri": "https://www.facebook.com/fbonly", "rating": 4.5, "userRatingCount": 25, "types": [] }
+    ]
+}

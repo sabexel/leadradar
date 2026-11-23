@@ -53,6 +53,10 @@ class Setting extends Model
         'agency.qualify_threshold' => 4.5,
         // Owner goal: qualified agencies a day (D126, dashboard card).
         'agency.daily_goal' => 20,
+        // Google Places as a second agency source (D128): runs alongside each agency web search when the key is set.
+        'source.places_agency.enabled' => true,
+        'source.places_agency.min_rating' => 4.0,
+        'source.places_agency.min_reviews' => 5,
         // Businesses that may need agency services (D127). New businesses per day; 0 turns it off.
         'source.business.per_day' => 30,
         'source.business.queries_per_day' => 10,

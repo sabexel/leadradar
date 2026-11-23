@@ -579,3 +579,16 @@
 - Notes / follow-ups: not yet measured live — next run will show the email-found rate and credits per qualified
   lead. Not done from the improvement list: named people from team pages, Google Places agency search (needs key),
   dashboard goal metrics, two workers, deploy.
+
+## 2026-11-24 — OPS/UAE Cleanup, fewer errors, faster queue, goal dashboard, UAE, Places filters (D123–D128)
+- Done: dead-site rejection in `CrawlCompanyWebsiteJob`; `CleanupLeadsAction` + `leadradar:cleanup` (hourly);
+  second scheduled worker (`sources,web`); `AgencyGoalQuery` + dashboard card; UAE: AE agency market, Brave ALL
+  fallback, `LeadProduct::Business`, `SignalSource::BusinessSearch`, `BusinessSearchPlanner`, `FetchBusinessSearchJob`,
+  `IngestBusinessAction`, home-page audit flags, business scoring/threshold, sidebar "UAE", Settings fields; Places
+  agency search with rating/review filters (`FetchPlacesAgenciesJob`) + Settings fields. Local cleanup run: 4 dead
+  sites rejected, 1 retried, 9 stuck restarted.
+- Tests: `CleanupLeadsTest` (7 incl. dataset), `UaeBusinessLeadsTest` (5), dashboard goal test, Places agencies test;
+  flaky `CompanyShowTest` score-total fixed (JSON 8 vs 8.0). 640 passing (one parallel run hit a Windows socket-buffer
+  error; the file passes alone). Pint, Larastan, vp check, tsc, build clean.
+- Decisions: D123–D128.
+- Notes / follow-ups: UAE and business leads not yet run live. Places needs the owner's key. Deploy still postponed.

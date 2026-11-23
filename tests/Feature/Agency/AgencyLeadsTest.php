@@ -26,6 +26,7 @@ use App\Jobs\Enrichment\CrawlCompanyWebsiteJob;
 use App\Jobs\Enrichment\SearchCompaniesHouseJob;
 use App\Jobs\Enrichment\VerifyEmailJob;
 use App\Jobs\Sources\FetchAgencySearchJob;
+use App\Jobs\Sources\FetchPlacesAgenciesJob;
 use App\Models\Company;
 use App\Models\EmailAddress;
 use App\Models\Person;
@@ -33,8 +34,11 @@ use App\Models\Setting;
 use App\Models\Signal;
 use App\Models\Suppression;
 use App\Services\Crawler\TechStackDetector;
+use App\Services\Dedupe\CompanyMatcher;
+use App\Services\Places\GooglePlacesService;
 use App\Services\Search\AgencyResultSelector;
 use App\Services\Search\BraveSearchService;
+use App\Services\Search\WebsiteSelector;
 use App\Services\Verification\MailDomainChecker;
 use App\Services\Verification\MillionVerifierService;
 use App\Services\Verification\VerificationPlanner;
@@ -341,4 +345,24 @@ it('renames an agency-search lead to the site\'s own brand name', function () {
 
     expect($company->refresh()->name)->toBe('Maple Pixel Studio')
         ->and($generic->refresh()->name)->toBe('Other Studio');
+});
+
+it('adds agencies from Google Places with rating and review filters (D128)', function () {
+    config(['services.google_places.key' => 'test-places-key']);
+    Setting::put('source.places_agency.min_rating', 4.0);
+    Setting::put('source.places_agency.min_reviews', 5);
+    Http::fake(['places.googleapis.com/*' => Http::response(jsonFixture('google-places/agencies.json'))]);
+
+    (new FetchPlacesAgenciesJob('shopify agency', 'Toronto', 'CA'))->withFakeQueueInteractions()->handle(
+        app(GooglePlacesService::class),
+        app(IngestAgencyAction::class),
+        app(CompanyMatcher::class),
+        app(WebsiteSelector::class),
+    );
+
+    Http::assertSent(fn ($request) => $request['minRating'] === 4.0 && $request['regionCode'] === 'CA' && $request['textQuery'] === 'shopify agency in Toronto');
+
+    // 2 reviews (filter), no website, and a Facebook page are all left out.
+    expect(Company::query()->pluck('domain')->all())->toBe(['maplepixel.example.ca'])
+        ->and(Company::sole()->lead_product)->toBe(LeadProduct::Agency);
 });

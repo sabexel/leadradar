@@ -13,6 +13,7 @@ use App\Jobs\Sources\FetchBusinessSearchJob;
 use App\Jobs\Sources\FetchCompaniesHouseSicJob;
 use App\Jobs\Sources\FetchGooglePlacesJob;
 use App\Jobs\Sources\FetchLaravelPartnersJob;
+use App\Jobs\Sources\FetchPlacesAgenciesJob;
 use App\Jobs\Sources\FetchReedJobsJob;
 use App\Models\ScrapeRun;
 use App\Models\Setting;
@@ -195,9 +196,17 @@ final class StartDiscoveryRunAction
             } else {
                 $batch = $this->agencySearches->nextBatch();
 
+                $places = (bool) Setting::get('source.places_agency.enabled') && filled(config('services.google_places.key'));
+
                 foreach ($batch as $search) {
                     FetchAgencySearchJob::dispatch($search['phrase'], $search['city'], $search['country'], $search['offset'], $run->id);
                     $dispatched[] = "agency_search:{$search['country']}:{$search['city']}:{$search['phrase']}";
+
+                    // The same search on Google Places, with rating/review filters (D128).
+                    if ($places && $search['offset'] === 0) {
+                        FetchPlacesAgenciesJob::dispatch($search['phrase'], $search['city'], $search['country'], $run->id);
+                        $dispatched[] = "places_agencies:{$search['country']}:{$search['city']}:{$search['phrase']}";
+                    }
                 }
 
                 if ($batch === []) {

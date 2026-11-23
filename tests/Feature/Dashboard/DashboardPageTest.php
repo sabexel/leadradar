@@ -7,6 +7,7 @@ use App\DTOs\Verification\EmailVerificationResult;
 use App\Enums\EmailKind;
 use App\Enums\EmailVerificationStatus;
 use App\Enums\ExternalService;
+use App\Enums\LeadProduct;
 use App\Enums\LeadStatus;
 use App\Enums\OutreachStatus;
 use App\Enums\RejectReason;
@@ -186,11 +187,11 @@ it('shows the last five runs, today\'s API usage against caps and the credit bal
 });
 
 it('shows the agency goal: today vs target, the week, email-found rate and countries', function () {
-    App\Models\Company::factory()->qualified(6.0)->create(['lead_product' => App\Enums\LeadProduct::Agency, 'country' => 'CA']);
-    App\Models\Company::factory()->qualified(5.0)->create(['lead_product' => App\Enums\LeadProduct::Agency, 'country' => 'GB']);
-    App\Models\Company::factory()->rejected(App\Enums\RejectReason::NoValidEmail)->create(['lead_product' => App\Enums\LeadProduct::Agency]);
-    App\Models\Company::factory()->create(['lead_product' => App\Enums\LeadProduct::Agency, 'status' => App\Enums\LeadStatus::Enriching]);
-    App\Models\ApiUsage::factory()->count(6)->create(['service' => App\Enums\ExternalService::MillionVerifier, 'date' => '2026-07-15']);
+    Company::factory()->qualified(6.0)->create(['lead_product' => LeadProduct::Agency, 'country' => 'CA']);
+    Company::factory()->qualified(5.0)->create(['lead_product' => LeadProduct::Agency, 'country' => 'GB']);
+    Company::factory()->rejected(RejectReason::NoValidEmail)->create(['lead_product' => LeadProduct::Agency]);
+    Company::factory()->create(['lead_product' => LeadProduct::Agency, 'status' => LeadStatus::Enriching]);
+    ApiUsage::factory()->count(6)->create(['service' => ExternalService::MillionVerifier, 'date' => '2026-07-15']);
 
     $this->get(route('dashboard'))->assertInertia(fn (Assert $page) => $page
         ->where('agencyGoal.goal', 20)

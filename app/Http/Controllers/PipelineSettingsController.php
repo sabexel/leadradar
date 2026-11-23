@@ -64,6 +64,9 @@ final class PipelineSettingsController extends Controller
                     'business_queries_per_day' => (int) Setting::get('source.business.queries_per_day'),
                     'business_threshold' => (float) Setting::get('business.qualify_threshold'),
                     'business_countries' => array_values((array) Setting::get('source.business.countries')),
+                    'places_enabled' => (bool) Setting::get('source.places_agency.enabled'),
+                    'places_min_rating' => (float) Setting::get('source.places_agency.min_rating'),
+                    'places_min_reviews' => (int) Setting::get('source.places_agency.min_reviews'),
                 ],
                 'website_places' => [
                     'per_day' => (int) Setting::get('source.places.per_day'),
@@ -110,6 +113,9 @@ final class PipelineSettingsController extends Controller
         Setting::put('source.business.per_day', (int) ($data['agency']['business_per_day'] ?? Setting::get('source.business.per_day')));
         Setting::put('source.business.queries_per_day', (int) ($data['agency']['business_queries_per_day'] ?? Setting::get('source.business.queries_per_day')));
         Setting::put('business.qualify_threshold', round((float) ($data['agency']['business_threshold'] ?? Setting::get('business.qualify_threshold')), 1));
+        Setting::put('source.places_agency.enabled', (bool) ($data['agency']['places_enabled'] ?? Setting::get('source.places_agency.enabled')));
+        Setting::put('source.places_agency.min_rating', round((float) ($data['agency']['places_min_rating'] ?? Setting::get('source.places_agency.min_rating')), 1));
+        Setting::put('source.places_agency.min_reviews', (int) ($data['agency']['places_min_reviews'] ?? Setting::get('source.places_agency.min_reviews')));
         Setting::put('source.business.countries', array_values($data['agency']['business_countries'] ?? (array) Setting::get('source.business.countries')));
         Setting::put('source.places.per_day', (int) $data['website_places']['per_day']);
         Setting::put('source.places.min_reviews', (int) $data['website_places']['min_reviews']);
