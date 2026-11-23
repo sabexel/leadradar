@@ -51,6 +51,8 @@ class Setting extends Model
         'source.agency.cursor' => 0,
         // Agency leads have no Laravel gate, so their own threshold (D116).
         'agency.qualify_threshold' => 4.5,
+        // Owner goal: qualified agencies a day (D126, dashboard card).
+        'agency.daily_goal' => 20,
         // Job ads for any stack in every Adzuna market (D117): phrases, Adzuna country codes, new companies a day.
         'search.agency_keywords' => ['wordpress developer', 'shopify developer', 'woocommerce developer'],
         'search.agency_job_countries' => ['gb', 'us', 'ca', 'au', 'nz', 'nl', 'be', 'de', 'at'],

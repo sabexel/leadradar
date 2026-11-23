@@ -56,6 +56,7 @@ final class DashboardQuery
             'runs' => $this->runs(),
             'apiUsage' => $this->apiUsage(),
             'credits' => $this->credits(),
+            'agencyGoal' => app(AgencyGoalQuery::class)->get(),
         ];
     }
 

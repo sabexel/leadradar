@@ -184,3 +184,20 @@ it('shows the last five runs, today\'s API usage against caps and the credit bal
         ])
         ->where('credits.credits', 4321));
 });
+
+it('shows the agency goal: today vs target, the week, email-found rate and countries', function () {
+    App\Models\Company::factory()->qualified(6.0)->create(['lead_product' => App\Enums\LeadProduct::Agency, 'country' => 'CA']);
+    App\Models\Company::factory()->qualified(5.0)->create(['lead_product' => App\Enums\LeadProduct::Agency, 'country' => 'GB']);
+    App\Models\Company::factory()->rejected(App\Enums\RejectReason::NoValidEmail)->create(['lead_product' => App\Enums\LeadProduct::Agency]);
+    App\Models\Company::factory()->create(['lead_product' => App\Enums\LeadProduct::Agency, 'status' => App\Enums\LeadStatus::Enriching]);
+    App\Models\ApiUsage::factory()->count(6)->create(['service' => App\Enums\ExternalService::MillionVerifier, 'date' => '2026-07-15']);
+
+    $this->get(route('dashboard'))->assertInertia(fn (Assert $page) => $page
+        ->where('agencyGoal.goal', 20)
+        ->where('agencyGoal.today', 2)
+        ->where('agencyGoal.inProgress', 1)
+        ->has('agencyGoal.days', 7)
+        ->where('agencyGoal.creditsPerQualified', 3)
+        ->where('agencyGoal.emailFoundRate', 0.67)
+        ->where('agencyGoal.byCountry', [['country' => 'CA', 'count' => 1], ['country' => 'GB', 'count' => 1]]));
+});

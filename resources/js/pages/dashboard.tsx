@@ -33,6 +33,7 @@ import { Input } from '@/components/ui/input';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { dashboard } from '@/routes';
 import type {
+    AgencyGoal,
     DashboardApiUsage,
     DashboardProps,
     DashboardRun,
@@ -63,6 +64,8 @@ export default function Dashboard(props: DashboardProps) {
         <>
             <Head title="Dashboard" />
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto p-4">
+                <AgencyGoalCard goal={props.agencyGoal} />
+
                 <RangePicker range={props.range} />
 
                 <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
@@ -136,6 +139,116 @@ Dashboard.layout = {
         },
     ],
 };
+
+function AgencyGoalCard({ goal }: { goal: AgencyGoal }) {
+    const percent = Math.min(100, (goal.today / goal.goal) * 100);
+    const reached = goal.today >= goal.goal;
+    const best = Math.max(goal.goal, ...goal.days.map((d) => d.qualified));
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Agency goal</CardTitle>
+                <CardDescription>
+                    Qualified agencies (any stack) per day — target {goal.goal}
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-6 lg:grid-cols-3">
+                <div className="flex flex-col gap-2">
+                    <div className="flex items-baseline gap-2">
+                        <span
+                            className={`text-3xl font-semibold tabular-nums ${reached ? 'text-emerald-600 dark:text-emerald-400' : ''}`}
+                        >
+                            {goal.today}
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                            / {goal.goal} today
+                        </span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-muted">
+                        <div
+                            className={`h-full rounded-full ${reached ? 'bg-emerald-500' : 'bg-primary'}`}
+                            style={{ width: `${percent}%` }}
+                        />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                        {goal.inProgress} agencies still being checked
+                    </p>
+                </div>
+
+                <div
+                    className="flex items-end gap-1.5"
+                    aria-label="Last 7 days"
+                >
+                    {goal.days.map((day) => (
+                        <div
+                            key={day.date}
+                            className="flex flex-1 flex-col items-center gap-1"
+                        >
+                            <span className="text-xs tabular-nums">
+                                {day.qualified}
+                            </span>
+                            <div
+                                className={`w-full rounded-sm ${day.qualified >= goal.goal ? 'bg-emerald-500' : 'bg-primary/70'}`}
+                                style={{
+                                    height: `${Math.max(3, (day.qualified / best) * 56)}px`,
+                                }}
+                            />
+                            <span className="text-[10px] text-muted-foreground">
+                                {new Date(
+                                    `${day.date}T12:00:00`,
+                                ).toLocaleDateString('en-GB', {
+                                    weekday: 'short',
+                                })}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+
+                <dl className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                        <dt className="text-xs text-muted-foreground">
+                            Credits per qualified (7 days)
+                        </dt>
+                        <dd className="font-medium tabular-nums">
+                            {goal.creditsPerQualified === null
+                                ? '—'
+                                : goal.creditsPerQualified}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt className="text-xs text-muted-foreground">
+                            Email found (7 days)
+                        </dt>
+                        <dd className="font-medium tabular-nums">
+                            {goal.emailFoundRate === null
+                                ? '—'
+                                : `${Math.round(goal.emailFoundRate * 100)}% of ${goal.finished7d}`}
+                        </dd>
+                    </div>
+                    <div className="col-span-2">
+                        <dt className="text-xs text-muted-foreground">
+                            Qualified by country (30 days)
+                        </dt>
+                        <dd className="flex flex-wrap gap-1.5 pt-1">
+                            {goal.byCountry.length === 0 && (
+                                <span className="text-muted-foreground">—</span>
+                            )}
+                            {goal.byCountry.map((row) => (
+                                <span
+                                    key={row.country}
+                                    className="rounded bg-muted px-1.5 py-0.5 text-xs tabular-nums"
+                                >
+                                    {row.country} {row.count}
+                                </span>
+                            ))}
+                        </dd>
+                    </div>
+                </dl>
+            </CardContent>
+        </Card>
+    );
+}
 
 function RangePicker({ range }: { range: DashboardProps['range'] }) {
     const [from, setFrom] = useState(range.from);

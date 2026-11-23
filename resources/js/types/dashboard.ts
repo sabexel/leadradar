@@ -55,4 +55,16 @@ export type DashboardProps = {
     runs: DashboardRun[];
     apiUsage: DashboardApiUsage[];
     credits: { credits: number; at: string | null } | null;
+    agencyGoal: AgencyGoal;
+};
+
+export type AgencyGoal = {
+    goal: number;
+    today: number;
+    inProgress: number;
+    days: { date: string; qualified: number }[];
+    creditsPerQualified: number | null;
+    emailFoundRate: number | null;
+    finished7d: number;
+    byCountry: { country: string; count: number }[];
 };
