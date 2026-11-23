@@ -154,7 +154,10 @@ final class WebsiteCrawlerService extends ExternalApiService
             laravelSignals: $this->laravel->detect($html, $text, $pageType, $finalUrl, $this->cookieNames($response)),
             offshoreSignals: $this->offshore->detectInText($text, $finalUrl),
             agencyTerms: $this->classifier->agencyTerms($text),
-            stack: $this->stack->detect($html, $text, $this->cookieNames($response), $pageType),
+            stack: [
+                ...$this->stack->detect($html, $text, $this->cookieNames($response), $pageType),
+                ...($pageType === PageType::Home && str_starts_with(strtolower($finalUrl), 'http://') ? ['audit:no_https'] : []),
+            ],
             siteName: $siteName === null ? null : Str::limit(html_entity_decode($siteName, ENT_QUOTES | ENT_HTML5), 80, ''),
         );
     }

@@ -95,7 +95,8 @@ it('shows the company, founders, candidates, score breakdown, evidence and timel
             ->where('scoreBreakdown.lines.0.key', 'laravel_evidence')
             ->where('scoreBreakdown.lines.0.items.job_ad', 1.5)
             ->where('scoreBreakdown.lines.1.daysOld', 3)
-            ->where('scoreBreakdown.total', (float) $company->score)
+            // JSON sends a whole score as 8, not 8.0 — compare the value, not the type.
+            ->where('scoreBreakdown.total', fn ($total) => (float) $total === (float) $company->score)
             ->where('laravelEvidence.0.detail', 'We build with Laravel')
             ->where('signals.0.title', 'Laravel Developer')
             ->where('events.0.step', 'qualify')

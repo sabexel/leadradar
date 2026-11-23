@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import {
     Activity,
+    Globe,
     FolderGit2,
     LayoutGrid,
     SlidersHorizontal,
@@ -37,6 +38,11 @@ const mainNavItems: NavItem[] = [
         title: 'Leads',
         href: companies(),
         icon: Users,
+    },
+    {
+        title: 'UAE',
+        href: companies({ query: { country: 'AE' } }),
+        icon: Globe,
     },
     {
         title: 'Imports',

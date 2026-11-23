@@ -82,6 +82,26 @@ final class TechStackDetector
             $found[] = 'flag:recruiter';
         }
 
+        // Website weaknesses a business would pay to fix (D127) — judged on the home page only.
+        if ($pageType === PageType::Home) {
+            if (preg_match('/<meta[^>]+name=["\']viewport["\']/', $lowerHtml) !== 1) {
+                $found[] = 'audit:no_viewport';
+            }
+
+            if (preg_match('/<meta[^>]+name=["\']description["\'][^>]+content=["\'][^"\']{20,}/', $lowerHtml) !== 1) {
+                $found[] = 'audit:no_meta_description';
+            }
+
+            preg_match_all('/(?:©|&copy;|copyright)\s*(?:\d{4}\s*[-–]\s*)?((?:19|20)\d{2})/u', $lowerHtml, $years);
+            $copyrightYears = array_map('intval', $years[1]);
+
+            if ($copyrightYears !== []) {
+                if (max($copyrightYears) <= (int) date('Y') - 3) {
+                    $found[] = 'audit:old_copyright';
+                }
+            }
+        }
+
         foreach (self::OFFERS as $stack => $pattern) {
             if (preg_match($pattern, $lowerText) === 1) {
                 $found[] = "offers:{$stack}";

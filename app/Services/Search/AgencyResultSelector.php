@@ -21,7 +21,7 @@ final class AgencyResultSelector
     private const MARKET_TLDS = [
         'GB' => ['uk'], 'US' => ['us'], 'CA' => ['ca'], 'AU' => ['au'], 'NZ' => ['nz'], 'IE' => ['ie'],
         'NL' => ['nl'], 'DE' => ['de'], 'BE' => ['be'], 'DK' => ['dk'], 'SE' => ['se'], 'NO' => ['no'],
-        'FI' => ['fi'], 'AT' => ['at'], 'CH' => ['ch'], 'FR' => ['fr'], 'ES' => ['es'], 'IT' => ['it'],
+        'FI' => ['fi'], 'AE' => ['ae'], 'AT' => ['at'], 'CH' => ['ch'], 'FR' => ['fr'], 'ES' => ['es'], 'IT' => ['it'],
         'PT' => ['pt'], 'PL' => ['pl'], 'LU' => ['lu'],
     ];
 

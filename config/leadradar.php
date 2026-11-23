@@ -102,6 +102,7 @@ return [
         'SE' => ['cities' => ['Stockholm', 'Gothenburg', 'Malmö'], 'phrases' => ['webbyrå']],
         'NO' => ['cities' => ['Oslo', 'Bergen'], 'phrases' => ['webbyrå']],
         'FI' => ['cities' => ['Helsinki', 'Tampere']],
+        'AE' => ['cities' => ['Dubai', 'Abu Dhabi', 'Sharjah', 'Ajman']],
     ],
 
     /*
@@ -111,6 +112,21 @@ return [
     | Spam Act conspicuous publication, and the stricter EU reading of ePrivacy). Other countries (GB corporate
     | subscribers, US CAN-SPAM) allow guessed founder addresses that MillionVerifier confirms.
     */
+    /*
+    | Businesses that may need agency services (D127): categories searched as "{category} {city}" per market. Only
+    | each business's own site is kept; a weak site (no HTTPS, not mobile-ready, old, no description) scores higher.
+    */
+    'business_markets' => [
+        'AE' => [
+            'cities' => ['Dubai', 'Abu Dhabi', 'Sharjah', 'Ajman'],
+            'categories' => [
+                'restaurant', 'medical clinic', 'dental clinic', 'real estate brokerage', 'car rental', 'interior design company',
+                'beauty salon', 'gym', 'cleaning company', 'travel agency', 'training institute', 'construction company',
+                'law firm', 'accounting firm', 'event management company', 'furniture store', 'logistics company', 'spa',
+            ],
+        ],
+    ],
+
     'email_consent_countries' => ['DE', 'AT'],
     'email_guessing_countries' => ['GB', 'US'],
 

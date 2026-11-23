@@ -1,0 +1,13 @@
+{
+    "type": "search",
+    "query": { "original": "dental clinic Dubai", "more_results_available": true },
+    "web": {
+        "type": "search",
+        "results": [
+            { "title": "Best Dental Clinics in Dubai - Top 10", "url": "https://example-directory.com/best-dental-dubai", "description": "List." },
+            { "title": "Smile Example Dental Clinic | Dubai", "url": "https://www.smileexample.ae/", "description": "Dental clinic in Jumeirah." },
+            { "title": "Dental clinics - Dubizzle", "url": "https://dubai.dubizzle.com/services/dental/", "description": "Listings." },
+            { "title": "Bright Teeth Centre", "url": "https://brightteeth.example.com/", "description": "Family dentist, Dubai Marina." }
+        ]
+    }
+}

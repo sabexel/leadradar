@@ -46,6 +46,10 @@ type Settings = {
         jobs_per_day: number;
         job_keywords: string[];
         job_countries: string[];
+        business_per_day: number;
+        business_queries_per_day: number;
+        business_threshold: number;
+        business_countries: string[];
     };
     website_places: {
         per_day: number;
@@ -111,6 +115,12 @@ export default function ConfigurationEdit({
         agency_jobs_per_day: String(settings.agency.jobs_per_day),
         agency_job_keywords: settings.agency.job_keywords.join('\n'),
         agency_job_countries: settings.agency.job_countries.join(', '),
+        business_per_day: String(settings.agency.business_per_day),
+        business_queries_per_day: String(
+            settings.agency.business_queries_per_day,
+        ),
+        business_threshold: String(settings.agency.business_threshold),
+        business_countries: settings.agency.business_countries.join(', '),
     });
 
     const errors = form.errors as Record<string, string | undefined>;
@@ -142,6 +152,10 @@ export default function ConfigurationEdit({
                 agency_jobs_per_day,
                 agency_job_keywords,
                 agency_job_countries,
+                business_per_day,
+                business_queries_per_day,
+                business_threshold,
+                business_countries,
                 ...data
             }) => ({
                 ...data,
@@ -153,6 +167,10 @@ export default function ConfigurationEdit({
                     jobs_per_day: agency_jobs_per_day,
                     job_keywords: agency_job_keywords.split('\n'),
                     job_countries: agency_job_countries.split(/[\s,]+/),
+                    business_per_day,
+                    business_queries_per_day,
+                    business_threshold,
+                    business_countries: business_countries.split(/[\s,]+/),
                 },
                 keywords: data.keywords.split('\n'),
                 countries: data.countries.split(/[\s,]+/),
@@ -299,6 +317,76 @@ export default function ConfigurationEdit({
                                     message={firstNested(
                                         errors,
                                         'agency.job_countries',
+                                    )}
+                                />
+                            </div>
+                            <div className="grid gap-2 sm:col-span-3">
+                                <p className="text-sm font-medium">
+                                    Businesses that need agency services (UAE
+                                    first)
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    Searches business categories (clinics,
+                                    restaurants, real estate…) in each market's
+                                    cities; weak websites score higher. Markets
+                                    available: AE.
+                                </p>
+                            </div>
+                            <NumberField
+                                id="agency.business_per_day"
+                                label="New businesses per day"
+                                value={form.data.business_per_day}
+                                onChange={(v) =>
+                                    form.setData('business_per_day', v)
+                                }
+                                error={errors['agency.business_per_day']}
+                                min={0}
+                                max={500}
+                            />
+                            <NumberField
+                                id="agency.business_queries_per_day"
+                                label="Business searches per day"
+                                value={form.data.business_queries_per_day}
+                                onChange={(v) =>
+                                    form.setData('business_queries_per_day', v)
+                                }
+                                error={
+                                    errors['agency.business_queries_per_day']
+                                }
+                                min={0}
+                                max={100}
+                            />
+                            <NumberField
+                                id="agency.business_threshold"
+                                label="Business qualify threshold (0–10)"
+                                value={form.data.business_threshold}
+                                onChange={(v) =>
+                                    form.setData('business_threshold', v)
+                                }
+                                error={errors['agency.business_threshold']}
+                                min={0}
+                                max={10}
+                                step={0.1}
+                            />
+                            <div className="grid gap-2 sm:col-span-3">
+                                <Label htmlFor="business_countries">
+                                    Business markets
+                                </Label>
+                                <Input
+                                    id="business_countries"
+                                    value={form.data.business_countries}
+                                    onChange={(e) =>
+                                        form.setData(
+                                            'business_countries',
+                                            e.target.value,
+                                        )
+                                    }
+                                    placeholder="AE"
+                                />
+                                <InputError
+                                    message={firstNested(
+                                        errors,
+                                        'agency.business_countries',
                                     )}
                                 />
                             </div>

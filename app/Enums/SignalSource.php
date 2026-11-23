@@ -17,6 +17,7 @@ enum SignalSource: string
     case CompaniesHouseSic = 'companies_house_sic';
     case GooglePlaces = 'google_places';
     case AgencySearch = 'agency_search';
+    case BusinessSearch = 'business_search';
 
     public function label(): string
     {
@@ -29,6 +30,7 @@ enum SignalSource: string
             self::CompaniesHouseSic => 'Companies House (SIC)',
             self::GooglePlaces => 'Google Places (no website)',
             self::AgencySearch => 'Agency search',
+            self::BusinessSearch => 'Business search',
         };
     }
 }

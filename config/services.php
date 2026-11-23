@@ -146,6 +146,12 @@ return [
             'agencies.shopify.com', 'experts.shopify.com', 'partners.shopify.com', 'woocommerce.com',
             'codeable.io', 'wpbeginner.com', 'wpexplorer.com', 'elementor.com', 'semji.com', 'medium.com',
             'businessofapps.com', 'digital.com', 'clutch.com', 'goodfirms.com', 'agencyanalytics.com',
+            // UAE listings and marketplaces (D127)
+            'dubizzle.com', 'bayut.com', 'propertyfinder.ae', 'zomato.com', 'talabat.com', 'deliveroo.ae', 'tripadvisor.com',
+            'tripadvisor.ae', 'yellowpages-uae.com', 'yellowpages.ae', 'connect.ae', '2gis.ae', 'timeoutdubai.com',
+            'whatson.ae', 'fresha.com', 'booksy.com', 'practo.com', 'okadoc.com', 'emiratesnbd.com', 'gulfnews.com',
+            'khaleejtimes.com', 'thenationalnews.com', 'visitdubai.com', 'dubai.ae', 'yelp.ae', 'hidubai.com', 'dubaicitycompany.com',
+            'uaebusinessdirectory.com', 'insidedubai.ae', 'booking.com', 'expedia.com', 'groupon.ae', 'cobone.com', 'servicemarket.com',
         ],
     ],
 

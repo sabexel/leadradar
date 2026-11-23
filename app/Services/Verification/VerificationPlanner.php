@@ -48,7 +48,7 @@ final class VerificationPlanner
 
         $worthChecking = fn (EmailAddress $e): bool => $this->needsVerification($e) && ! in_array($this->domainOf($e->email), $deadEndDomains, true);
 
-        $agency = $company->lead_product === LeadProduct::Agency;
+        $agency = in_array($company->lead_product, [LeadProduct::Agency, LeadProduct::Business], true);
 
         // Agency leads need one working address, not every one (D120): stop at the first verified address.
         if ($agency && $emails->contains(fn (EmailAddress $e): bool => $e->verification_status === EmailVerificationStatus::Ok && $this->isFresh($e))) {
@@ -82,7 +82,7 @@ final class VerificationPlanner
             }
         }
 
-        if ($company->lead_product !== LeadProduct::Agency) {
+        if (! $agency) {
             return null;
         }
 

@@ -9,6 +9,7 @@ use App\Enums\RunTrigger;
 use App\Enums\ScrapeRunStatus;
 use App\Jobs\Sources\FetchAdzunaJobsJob;
 use App\Jobs\Sources\FetchAgencySearchJob;
+use App\Jobs\Sources\FetchBusinessSearchJob;
 use App\Jobs\Sources\FetchCompaniesHouseSicJob;
 use App\Jobs\Sources\FetchGooglePlacesJob;
 use App\Jobs\Sources\FetchLaravelPartnersJob;
@@ -16,6 +17,7 @@ use App\Jobs\Sources\FetchReedJobsJob;
 use App\Models\ScrapeRun;
 use App\Models\Setting;
 use App\Services\Search\AgencySearchPlanner;
+use App\Services\Search\BusinessSearchPlanner;
 use App\Services\Support\DailyTarget;
 use Carbon\CarbonImmutable;
 
@@ -31,6 +33,7 @@ final class StartDiscoveryRunAction
         private readonly IngestWebsitePlaceAction $places,
         private readonly IngestAgencyAction $agencies,
         private readonly AgencySearchPlanner $agencySearches,
+        private readonly BusinessSearchPlanner $businessSearches,
     ) {}
 
     /**
@@ -200,6 +203,14 @@ final class StartDiscoveryRunAction
                 if ($batch === []) {
                     $skipped[] = 'agency search: no markets enabled';
                 }
+            }
+        }
+
+        // Businesses that may need agency services — UAE first (D127).
+        if ((int) Setting::get('source.business.per_day') > 0 && filled(config('services.brave.key'))) {
+            foreach ($this->businessSearches->nextBatch() as $search) {
+                FetchBusinessSearchJob::dispatch($search['phrase'], $search['city'], $search['country'], $search['offset'], $run->id);
+                $dispatched[] = "business_search:{$search['country']}:{$search['city']}:{$search['phrase']}";
             }
         }
 

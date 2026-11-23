@@ -21,6 +21,11 @@ use Illuminate\Support\Str;
  */
 final class BraveSearchService extends ExternalApiService
 {
+    /**
+     * Brave's search markets (`country`); others (AE, IE…) search ALL with the city in the query (D127).
+     */
+    private const MARKETS = ['AR', 'AU', 'AT', 'BE', 'BR', 'CA', 'CL', 'DK', 'FI', 'FR', 'DE', 'HK', 'IN', 'ID', 'IT', 'JP', 'KR', 'MY', 'MX', 'NL', 'NZ', 'NO', 'CN', 'PL', 'PT', 'PH', 'RU', 'SA', 'ZA', 'ES', 'SE', 'CH', 'TW', 'TR', 'GB', 'US'];
+
     public function __construct(
         ApiUsageLimiter $limiter,
         private readonly CompanyMatcher $matcher,
@@ -51,7 +56,9 @@ final class BraveSearchService extends ExternalApiService
      */
     public function searchAgencies(string $query, string $country, int $offset = 0): Collection
     {
-        return $this->search(Str::squish($query), strtoupper($country), $offset);
+        $country = strtoupper($country);
+
+        return $this->search(Str::squish($query), in_array($country, self::MARKETS, true) ? $country : 'ALL', $offset);
     }
 
     /**

@@ -122,6 +122,7 @@ it('says why discovery could not start', function () {
     Setting::put('source.laravel_partners.enabled', false);
     Setting::put('source.agency.per_day', 0);
     Setting::put('source.agency_jobs.per_day', 0);
+    Setting::put('source.business.per_day', 0);
 
     $this->post(route('runs.discover'))
         ->assertInertiaFlash('toast.type', 'warning')

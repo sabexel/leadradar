@@ -41,6 +41,14 @@ final class LeadScoringService
     {
         $company->loadMissing(['signals', 'emailAddresses', 'people', 'contactEmail', 'careersEmail']);
 
+        if ($company->lead_product === LeadProduct::Business) {
+            $breakdown = $this->businessBreakdown($company);
+            $total = min(10.0, round(array_sum(array_column($breakdown, 'points')), 1));
+
+            // Same gates as agencies (website, real address, not a recruiter, not suppressed).
+            return new LeadScore($total, $breakdown, $this->failedAgencyGate($company));
+        }
+
         if ($company->lead_product === LeadProduct::Agency) {
             $breakdown = $this->agencyBreakdown($company);
             $total = min(10.0, round(array_sum(array_column($breakdown, 'points')), 1));
@@ -121,6 +129,51 @@ final class LeadScoringService
         $inboxes = 1.5 + ($company->careersEmail !== null ? 0.5 : 0.0);
 
         return round($breakdown['stack']['points'] + $breakdown['company_fit']['points'] + $reach + $inboxes, 1);
+    }
+
+    /**
+     * 0–10 for businesses that may need agency services (D127): how much their website needs work, and whether we
+     * can reach them.
+     *
+     * @return array<string, array{points: float, max: float, items: array<string, float>}>
+     */
+    private function businessBreakdown(Company $company): array
+    {
+        $stack = $company->tech_stack ?? [];
+        $has = fn (string $flag): bool => in_array($flag, $stack, true);
+        $personOk = $company->emailAddresses->contains(fn (EmailAddress $e): bool => $e->kind === EmailKind::Person && $e->verification_status === EmailVerificationStatus::Ok);
+        $anyOk = $company->emailAddresses->contains(fn (EmailAddress $e): bool => $e->verification_status === EmailVerificationStatus::Ok);
+
+        return [
+            'website_needs_work' => $this->line(5.0, [
+                'not_mobile_ready' => $has('audit:no_viewport') ? 2.0 : 0.0,
+                'no_https' => $has('audit:no_https') ? 1.5 : 0.0,
+                'outdated' => $has('audit:old_copyright') ? 1.0 : 0.0,
+                'no_description' => $has('audit:no_meta_description') ? 0.5 : 0.0,
+                'site_builder' => $has('built:wix') || $has('built:squarespace') ? 0.5 : 0.0,
+            ]),
+            'reach' => $this->line(3.0, [
+                'contact_ok' => $company->contactEmail?->verification_status === EmailVerificationStatus::Ok ? 1.5 : 0.0,
+                'named_person_ok' => $personOk ? 1.5 : 0.0,
+                'other_address_ok' => $anyOk && $company->contactEmail?->verification_status !== EmailVerificationStatus::Ok && ! $personOk ? 1.0 : 0.0,
+            ]),
+            'fit' => $this->line(2.0, [
+                'local_domain' => $company->domain !== null && str_ends_with($company->domain, '.'.strtolower($company->country)) ? 0.5 : 0.0,
+                'established_site' => $has('built:wordpress') || $has('built:shopify') || $has('built:woocommerce') ? 0.5 : 0.0,
+                'has_careers' => $company->careersEmail !== null ? 1.0 : 0.0,
+            ]),
+        ];
+    }
+
+    /**
+     * Best possible business score after the crawl: the website line is known; reach at its best.
+     */
+    public function bestPossibleBusinessScore(Company $company): float
+    {
+        $company->loadMissing(['signals', 'emailAddresses', 'people', 'contactEmail', 'careersEmail']);
+        $breakdown = $this->businessBreakdown($company);
+
+        return round($breakdown['website_needs_work']['points'] + 3.0 + $breakdown['fit']['points'], 1);
     }
 
     /**

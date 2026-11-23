@@ -137,9 +137,10 @@ final class ApplyCrawlResultAction
 
         // An agency lead that can't reach the threshold even if every email check came back perfect stops here,
         // before any verification credit is spent (D119).
-        if ($company->lead_product === LeadProduct::Agency) {
-            $best = $this->scoring->bestPossibleAgencyScore($company);
-            $threshold = (float) Setting::get('agency.qualify_threshold');
+        if (in_array($company->lead_product, [LeadProduct::Agency, LeadProduct::Business], true)) {
+            $agency = $company->lead_product === LeadProduct::Agency;
+            $best = $agency ? $this->scoring->bestPossibleAgencyScore($company) : $this->scoring->bestPossibleBusinessScore($company);
+            $threshold = (float) Setting::get($agency ? 'agency.qualify_threshold' : 'business.qualify_threshold');
 
             if ($best < $threshold) {
                 $company->update(['pipeline_step' => PipelineStep::Done, 'score' => $best]);

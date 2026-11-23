@@ -13,6 +13,7 @@ enum LeadProduct: string
     case Laravel = 'laravel';
     case Website = 'website';
     case Agency = 'agency';
+    case Business = 'business';
 
     public function label(): string
     {
@@ -20,6 +21,7 @@ enum LeadProduct: string
             self::Laravel => 'Laravel',
             self::Website => 'Needs a website',
             self::Agency => 'Agency (any stack)',
+            self::Business => 'Business (needs services)',
         };
     }
 }

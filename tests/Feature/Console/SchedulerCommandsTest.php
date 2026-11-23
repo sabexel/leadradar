@@ -29,6 +29,7 @@ beforeEach(function () {
     // These tests cover the Laravel job-board searches; the agency sources (D113, D117) have their own tests.
     Setting::put('source.agency.per_day', 0);
     Setting::put('source.agency_jobs.per_day', 0);
+    Setting::put('source.business.per_day', 0);
     Queue::fake();
 });
 
