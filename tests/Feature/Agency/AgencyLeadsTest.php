@@ -197,3 +197,34 @@ it('ingests agency job ads abroad as Agency leads that go straight to the websit
         ->and($company->status)->toBe(LeadStatus::Enriching)
         ->and($company->pipeline_step)->toBe(PipelineStep::FindWebsite);
 });
+
+it('stops a lead that cannot reach the threshold before any email check', function () {
+    // An in-house team from a job ad, whose site offers nothing we serve: best case 0.75 + 1.5 + 1.5 < 4.5.
+    $company = Company::factory()->create([
+        'lead_product' => LeadProduct::Agency,
+        'company_type' => CompanyType::DirectClient,
+        'country' => 'US',
+        'tech_stack' => ['built:wix'],
+        'status' => LeadStatus::Enriching,
+        'pipeline_step' => PipelineStep::Crawl,
+    ]);
+
+    app(ApplyCrawlResultAction::class)->finish($company);
+
+    expect($company->refresh()->reject_reason)->toBe(RejectReason::BelowThreshold)
+        ->and($company->pipeline_step)->toBe(PipelineStep::Done)
+        ->and(EmailAddress::count())->toBe(0);
+
+    // The same company offering WordPress can still make it, so it continues.
+    $agency = Company::factory()->create([
+        'lead_product' => LeadProduct::Agency,
+        'company_type' => CompanyType::Agency,
+        'country' => 'US',
+        'tech_stack' => ['offers:wordpress'],
+        'status' => LeadStatus::Enriching,
+        'pipeline_step' => PipelineStep::Crawl,
+    ]);
+    app(ApplyCrawlResultAction::class)->finish($agency);
+
+    expect($agency->refresh()->pipeline_step)->toBe(PipelineStep::BuildEmailCandidates);
+});

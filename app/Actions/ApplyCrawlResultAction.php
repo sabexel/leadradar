@@ -19,6 +19,7 @@ use App\Models\Company;
 use App\Models\CrawledPage;
 use App\Models\EmailAddress;
 use App\Models\Person;
+use App\Models\Setting;
 use App\Services\Scoring\LeadScoringService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -126,6 +127,23 @@ final class ApplyCrawlResultAction
             $company->reject(RejectReason::NoLaravelEvidence, 'No Laravel evidence on the site or in a job ad — stopped before email checks');
 
             return $company;
+        }
+
+        // An agency lead that can't reach the threshold even if every email check came back perfect stops here,
+        // before any verification credit is spent (D119).
+        if ($company->lead_product === LeadProduct::Agency) {
+            $best = $this->scoring->bestPossibleAgencyScore($company);
+            $threshold = (float) Setting::get('agency.qualify_threshold');
+
+            if ($best < $threshold) {
+                $company->update(['pipeline_step' => PipelineStep::Done, 'score' => $best]);
+                $company->reject(RejectReason::BelowThreshold, "Best possible score {$best} is below {$threshold} (no served stack / not an agency) — stopped before email checks", [
+                    'best_possible' => $best,
+                    'threshold' => $threshold,
+                ]);
+
+                return $company;
+            }
         }
 
         $company->update(['pipeline_step' => PipelineStep::BuildEmailCandidates]);

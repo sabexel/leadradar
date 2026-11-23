@@ -107,6 +107,23 @@ final class LeadScoringService
     }
 
     /**
+     * The highest score an agency lead could still reach after the crawl (D119): stack and fit are known; reach
+     * and inboxes are taken at their best — a verified founder (only with registry founders in a country that
+     * allows guessed addresses, else a named person from the site), LinkedIn if founders exist, a verified inbox.
+     */
+    public function bestPossibleAgencyScore(Company $company): float
+    {
+        $company->loadMissing(['signals', 'emailAddresses', 'people', 'contactEmail', 'careersEmail']);
+        $breakdown = $this->agencyBreakdown($company);
+
+        $hasFounders = $this->founders($company)->isNotEmpty();
+        $reach = $hasFounders ? 3.0 : 1.5; // founder 2.0 + LinkedIn 0.5 (+ named person), else a named person only
+        $inboxes = 1.5 + ($company->careersEmail !== null ? 0.5 : 0.0);
+
+        return round($breakdown['stack']['points'] + $breakdown['company_fit']['points'] + $reach + $inboxes, 1);
+    }
+
+    /**
      * Any address MillionVerifier confirmed `ok`, or one the agency published itself that is `catch_all`.
      */
     public function isAgencyContactable(Company $company): bool
