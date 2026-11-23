@@ -538,3 +538,31 @@
 - Tests: tsc + Vite build clean (UI-only).
 - Decisions: D112; P4.4 ticked.
 - Notes / follow-ups: hard-refresh /companies to see icons. Templates can be tuned later.
+
+## 2026-11-23 — AGENCY Agency leads of any stack, worldwide (owner goal: 20 qualified/day)
+- Done: `LeadProduct::Agency`, `SignalSource::AgencySearch`, migration `tech_stack`; `TechStackDetector` (crawl:
+  built-with / offers / recruiter flag); `BraveSearchService::searchAgencies()` (country + result page);
+  `AgencyResultSelector`, `AgencySearchPlanner` (markets × cities × phrases, cursor, interleaved);
+  `FetchAgencySearchJob` + `IngestAgencyAction`; Adzuna in any country (`AdzunaService::search(…, $country)`,
+  `FetchAdzunaJobsJob(country, product)`, `IngestJobAdAction` product/country, agency job cap); agency gates + score
+  + threshold (`LeadScoringService::failedAgencyGate/agencyBreakdown/bestPossibleAgencyScore`, `QualifyCompanyAction`);
+  unmatched UK agencies continue without registry data; agency type kept for search finds; verifier tries 2 more
+  published addresses for agencies; founder-address guessing only in GB/US; DE/AT flagged consent-required;
+  recruiter rejection from the own home/about page (all products); post-crawl stop when the best possible agency
+  score is below the threshold; Settings → "Agency leads (any stack)" card; agency outreach email template using the
+  detected stack; config `leadradar.agency_markets`, `agency_phrases`, `email_consent_countries`,
+  `email_guessing_countries`, `services.brave.agency_blocked_domains`. Baseline before this: the uncommitted Places /
+  P4.2 WIP was made green (Larastan fixes, 3 stale tests) and committed.
+- Tests: `tests/Unit/Search/AgencySearchTest.php` (4) and `tests/Feature/Agency/AgencyLeadsTest.php` (10): result
+  filtering (directories, listicles, deep pages, foreign ccTLD, tracking query ok), planner interleave/cursor/offset,
+  search → agency leads (CA straight to crawl, GB to CH, dedupe, DE consent flag, daily cap, suppression), agency
+  qualification without Laravel evidence, no email / no stack rejections, crawl continues for agencies, recruiter flag
+  incl. "no recruitment agencies" notices, no guessed addresses outside GB/US, agency job ad abroad, early stop before
+  email checks; settings save/validation. 621+ passing; Pint, Larastan, vp check, tsc, build clean.
+- Live run #7 (local, real keys): 45 new companies, 44 from agency job ads (28 US) — only 2 qualified for 61
+  MillionVerifier credits; the web-search jobs sat behind them in the queue. Response: D119 early stop, agency job ads
+  cut to 15/day locally, Companies House SIC source off locally (D118). Run continued to drain the queue.
+- Decisions: D113–D119.
+- Notes / follow-ups: MillionVerifier balance is the hard limit (~110 credits left) — owner must top up for 20/day.
+  Google Places key would add a second strong agency source. Flaky once: `CompanyShowTest` "shows the company…"
+  failed in one run and passed on re-run (not reproduced).
