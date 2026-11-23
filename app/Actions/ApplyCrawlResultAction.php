@@ -14,13 +14,16 @@ use App\Enums\LeadProduct;
 use App\Enums\PipelineOutcome;
 use App\Enums\PipelineStep;
 use App\Enums\RejectReason;
+use App\Enums\SignalSource;
 use App\Enums\SignalWeight;
 use App\Models\Company;
 use App\Models\CrawledPage;
 use App\Models\EmailAddress;
 use App\Models\Person;
 use App\Models\Setting;
+use App\Services\Dedupe\CompanyMatcher;
 use App\Services\Scoring\LeadScoringService;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -34,6 +37,7 @@ final class ApplyCrawlResultAction
     public function __construct(
         private readonly ClassifyCompanyAction $classify,
         private readonly LeadScoringService $scoring,
+        private readonly CompanyMatcher $matcher,
     ) {}
 
     public function apply(Company $company, CrawlResult $result): CrawledPage
@@ -56,6 +60,7 @@ final class ApplyCrawlResultAction
                         'offshore' => array_map(fn (DetectedSignal $s): array => $s->toArray(), $result->offshoreSignals),
                         'agency_terms' => $result->agencyTerms,
                         'stack' => $result->stack,
+                        'site_name' => $result->siteName,
                     ], fn (mixed $v): bool => $v !== null && $v !== []),
                 ],
             );
@@ -113,6 +118,7 @@ final class ApplyCrawlResultAction
         // without it stops here, before any MillionVerifier or Brave credit is spent on its people (D107).
         // Agency leads of any stack (D113) have no Laravel gate, so they always continue.
         $company->refresh();
+        $this->applyBrandName($company, $pages);
 
         // The company's own site says it is a recruiter (D118) — whatever its name or job ad said.
         if (in_array('flag:recruiter', $company->tech_stack ?? [], true)) {
@@ -220,5 +226,41 @@ final class ApplyCrawlResultAction
         }
 
         return array_values($merged);
+    }
+
+    /**
+     * Agency-search leads are named from the search result title, which is often SEO text ("Web Design Toronto").
+     * The site's own name (og:site_name / application-name on the home page) replaces it when it looks like a
+     * brand (D122).
+     *
+     * @param  Collection<int, CrawledPage>  $pages
+     */
+    private function applyBrandName(Company $company, Collection $pages): void
+    {
+        if (! $company->signals()->where('source', SignalSource::AgencySearch)->exists()) {
+            return;
+        }
+
+        $brand = $pages->sortBy('id')
+            ->map(fn (CrawledPage $p): ?string => is_string($p->extracted['site_name'] ?? null) ? $p->extracted['site_name'] : null)
+            ->filter()
+            ->first();
+
+        if (! is_string($brand) || ! $this->looksLikeBrand($brand) || $brand === $company->name) {
+            return;
+        }
+
+        $old = $company->name;
+        $company->update(['name' => $brand, 'normalised_name' => $this->matcher->normalise($brand)]);
+        $company->recordEvent(PipelineStep::Crawl, PipelineOutcome::Ok, "Renamed from \"{$old}\" to the site's own name \"{$brand}\"");
+    }
+
+    private function looksLikeBrand(string $name): bool
+    {
+        $length = mb_strlen($name);
+
+        return $length >= 2 && $length <= 40
+            && preg_match('/[|:]|\s[-–—]\s/u', $name) !== 1
+            && preg_match('/\b(?:web ?design|website design|web development|agency in|company in|near me|best|top \d+)\b/i', $name) !== 1;
     }
 }

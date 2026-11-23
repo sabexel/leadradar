@@ -566,3 +566,16 @@
 - Notes / follow-ups: MillionVerifier balance is the hard limit (~110 credits left) — owner must top up for 20/day.
   Google Places key would add a second strong agency source. Flaky once: `CompanyShowTest` "shows the company…"
   failed in one run and passed on re-run (not reproduced).
+
+## 2026-11-24 — AGENCY More addresses, fewer credits, real names (D120–D122)
+- Done: `VerificationPlanner` agency order + first-ok stop + caps; role-inbox guesses (`info@`, `hello@`) for GB/US
+  agencies with no published address; working guessed inbox → contact inbox; `MailDomainChecker` DNS pre-check in
+  `VerifyEmailJob` (config `services.millionverifier.mx_precheck`, off in tests); crawler reads `og:site_name` /
+  `application-name`, agency-search leads renamed to their brand after the crawl.
+- Tests: `AgencyLeadsTest` +5 (role guesses GB vs CA, verification order with founder cap and first-ok stop, guessed
+  inbox becomes contact inbox, no credit on a mail-less domain, brand rename incl. a rejected SEO-style site name).
+  626 passing; Pint, Larastan, vp check, tsc clean.
+- Decisions: D120–D122.
+- Notes / follow-ups: not yet measured live — next run will show the email-found rate and credits per qualified
+  lead. Not done from the improvement list: named people from team pages, Google Places agency search (needs key),
+  dashboard goal metrics, two workers, deploy.

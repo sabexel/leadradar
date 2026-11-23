@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\DTOs\Verification\EmailVerificationResult;
+use App\Enums\EmailKind;
 use App\Enums\EmailOrigin;
 use App\Enums\EmailVerificationStatus;
 use App\Enums\PipelineOutcome;
@@ -34,6 +35,11 @@ final class ApplyVerificationResultAction
         // The balance comes free with each result; the dashboard shows the last one (D86).
         if ($result->creditsLeft !== null) {
             Setting::put('millionverifier.credits', ['credits' => $result->creditsLeft, 'at' => now()->toIso8601String()]);
+        }
+
+        // A guessed standard inbox that works becomes the company's contact inbox (D120).
+        if ($result->status === EmailVerificationStatus::Ok && $email->kind === EmailKind::Contact && $email->company->contact_email_id === null) {
+            $email->company->update(['contact_email_id' => $email->id]);
         }
 
         if ($result->status === EmailVerificationStatus::Ok && $email->person !== null) {

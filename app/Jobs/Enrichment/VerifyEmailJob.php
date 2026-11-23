@@ -7,11 +7,13 @@ namespace App\Jobs\Enrichment;
 use App\Actions\AdvanceLeadPipelineAction;
 use App\Actions\ApplyVerificationResultAction;
 use App\DTOs\Verification\EmailVerificationResult;
+use App\Enums\EmailVerificationStatus;
 use App\Enums\ExternalService;
 use App\Enums\PipelineStep;
 use App\Jobs\Concerns\FailsCompanyStep;
 use App\Jobs\Concerns\InteractsWithServiceLimits;
 use App\Models\EmailAddress;
+use App\Services\Verification\MailDomainChecker;
 use App\Services\Verification\MillionVerifierService;
 use App\Services\Verification\VerificationPlanner;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -54,7 +56,9 @@ final class VerifyEmailJob implements ShouldBeUnique, ShouldQueue
         VerificationPlanner $planner,
         ApplyVerificationResultAction $apply,
         AdvanceLeadPipelineAction $advance,
+        ?MailDomainChecker $mailDomains = null,
     ): void {
+        $mailDomains ??= app(MailDomainChecker::class);
         $email = EmailAddress::with('company')->find($this->emailAddressId);
         $company = $email?->company;
 
@@ -67,7 +71,18 @@ final class VerifyEmailJob implements ShouldBeUnique, ShouldQueue
         }
 
         // Verified recently (e.g. a retry of this job) → no second credit.
-        if ($planner->needsVerification($email)) {
+        if ($planner->needsVerification($email) && ! $mailDomains->acceptsMail($planner->domainOf($email->email))) {
+            // The domain can't receive mail at all: recorded like MillionVerifier's dns_error, so the planner
+            // treats the whole domain as a dead end (D103) — and no credit is spent (D121).
+            $apply->apply($email, new EmailVerificationResult(
+                email: $email->email,
+                status: EmailVerificationStatus::Invalid,
+                subresult: 'dns_error',
+                quality: null,
+                creditsLeft: null,
+                raw: ['source' => 'dns', 'subresult' => 'dns_error', 'reason' => 'no MX/A record'],
+            ));
+        } elseif ($planner->needsVerification($email)) {
             [$called, $result] = $this->withinServiceLimits(fn (): EmailVerificationResult => $verifier->verify($email->email));
 
             if (! $called || $result === null) {

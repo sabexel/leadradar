@@ -123,6 +123,13 @@ final class WebsiteCrawlerService extends ExternalApiService
             });
 
             $title = $dom->filter('title')->count() > 0 ? Str::squish($dom->filter('title')->first()->text('')) : null;
+            $siteName = null;
+
+            foreach (['meta[property="og:site_name"]', 'meta[name="application-name"]'] as $selector) {
+                if ($siteName === null && $dom->filter($selector)->count() > 0) {
+                    $siteName = Str::squish((string) $dom->filter($selector)->first()->attr('content')) ?: null;
+                }
+            }
             $text = $dom->filter('body')->count() > 0 ? Str::squish($dom->filter('body')->first()->text('')) : Str::squish(strip_tags($html));
             $links = $dom->filter('a[href]')->each(fn (Crawler $a): array => [
                 'href' => (string) $a->attr('href'),
@@ -130,6 +137,7 @@ final class WebsiteCrawlerService extends ExternalApiService
             ]);
         } catch (Throwable) {
             $title = null;
+            $siteName = null;
             $text = Str::squish(strip_tags($html));
             $links = [];
         }
@@ -147,6 +155,7 @@ final class WebsiteCrawlerService extends ExternalApiService
             offshoreSignals: $this->offshore->detectInText($text, $finalUrl),
             agencyTerms: $this->classifier->agencyTerms($text),
             stack: $this->stack->detect($html, $text, $this->cookieNames($response), $pageType),
+            siteName: $siteName === null ? null : Str::limit(html_entity_decode($siteName, ENT_QUOTES | ENT_HTML5), 80, ''),
         );
     }
 

@@ -7,6 +7,7 @@ namespace App\Actions;
 use App\Enums\EmailKind;
 use App\Enums\EmailOrigin;
 use App\Enums\EmailVerificationStatus;
+use App\Enums\LeadProduct;
 use App\Enums\PipelineOutcome;
 use App\Enums\PipelineStep;
 use App\Models\Company;
@@ -21,6 +22,11 @@ use Illuminate\Support\Facades\DB;
  */
 final class BuildFounderEmailCandidatesAction
 {
+    /**
+     * Standard inboxes guessed for agencies that publish none (D120), most common first.
+     */
+    private const ROLE_INBOXES = ['info', 'hello'];
+
     public function __construct(private readonly EmailPatternService $patterns) {}
 
     public function run(Company $company): Company
@@ -57,6 +63,8 @@ final class BuildFounderEmailCandidatesAction
                 }
             }
         });
+
+        $created += $this->roleInboxGuesses($company);
 
         $company->update(['pipeline_step' => PipelineStep::VerifyEmails]);
         $company->recordEvent(PipelineStep::BuildEmailCandidates, PipelineOutcome::Ok, "{$created} candidate email(s) for {$founders->count()} founder(s)", [
@@ -106,5 +114,33 @@ final class BuildFounderEmailCandidatesAction
         arsort($counts);
 
         return (string) array_key_first($counts);
+    }
+
+    /**
+     * Agency leads in countries that allow guessed addresses (D115) whose site published no address at all get the
+     * two standard inboxes most agencies run (D120). The verifier tries them last, so a published address or a
+     * founder always comes first.
+     */
+    private function roleInboxGuesses(Company $company): int
+    {
+        if ($company->lead_product !== LeadProduct::Agency
+            || $company->domain === null
+            || ! in_array($company->country, (array) config('leadradar.email_guessing_countries', ['GB']), true)
+            || $company->emailAddresses()->where('origin', EmailOrigin::Crawled)->exists()) {
+            return 0;
+        }
+
+        $created = 0;
+
+        foreach (self::ROLE_INBOXES as $local) {
+            $row = EmailAddress::query()->firstOrCreate(
+                ['company_id' => $company->id, 'email' => $local.'@'.mb_strtolower($company->domain)],
+                ['person_id' => null, 'kind' => EmailKind::Contact, 'origin' => EmailOrigin::Generated, 'source_url' => null],
+            );
+
+            $created += $row->wasRecentlyCreated ? 1 : 0;
+        }
+
+        return $created;
     }
 }

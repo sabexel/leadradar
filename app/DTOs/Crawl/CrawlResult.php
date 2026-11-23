@@ -34,6 +34,7 @@ final readonly class CrawlResult
         public array $agencyTerms = [],
         public ?string $skippedBecause = null,
         public array $stack = [],
+        public ?string $siteName = null,
     ) {}
 
     public static function skipped(string $url, PageType $pageType, string $reason, ?int $status = null): self

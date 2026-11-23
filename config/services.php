@@ -93,6 +93,8 @@ return [
         'verify_timeout' => 10,
         'per_minute' => 60,
         'reverify_after_days' => 90,
+        // Free DNS check before each paid verification (D121); off in the test suite (phpunit.xml).
+        'mx_precheck' => (bool) env('MILLIONVERIFIER_MX_PRECHECK', true),
     ],
 
     'brave' => [

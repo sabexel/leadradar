@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Verification;
 
+use App\Enums\EmailKind;
 use App\Enums\EmailOrigin;
 use App\Enums\EmailVerificationStatus;
 use App\Enums\LeadProduct;
@@ -25,6 +26,13 @@ use Illuminate\Support\Collection;
 final class VerificationPlanner
 {
     /**
+     * Agency leads (D120): guessed founder patterns tried per founder, and standard inboxes tried per lead.
+     */
+    public const MAX_FOUNDER_GUESSES = 3;
+
+    public const MAX_ROLE_GUESSES = 2;
+
+    /**
      * MillionVerifier subresults that describe the domain, not the mailbox.
      */
     private const NO_MAIL_SERVER_SUBRESULTS = ['dns_error'];
@@ -40,10 +48,22 @@ final class VerificationPlanner
 
         $worthChecking = fn (EmailAddress $e): bool => $this->needsVerification($e) && ! in_array($this->domainOf($e->email), $deadEndDomains, true);
 
+        $agency = $company->lead_product === LeadProduct::Agency;
+
+        // Agency leads need one working address, not every one (D120): stop at the first verified address.
+        if ($agency && $emails->contains(fn (EmailAddress $e): bool => $e->verification_status === EmailVerificationStatus::Ok && $this->isFresh($e))) {
+            return null;
+        }
+
         foreach ($company->founders()->get() as $founder) {
             $own = $this->forPerson($emails, $founder);
 
             if ($own->contains(fn (EmailAddress $e): bool => $e->verification_status === EmailVerificationStatus::Ok && $this->isFresh($e))) {
+                continue;
+            }
+
+            // Agency leads: at most three guessed patterns per founder (the commonest come first).
+            if ($agency && $own->filter(fn (EmailAddress $e): bool => $e->origin === EmailOrigin::Generated && $e->verified_at !== null)->count() >= self::MAX_FOUNDER_GUESSES) {
                 continue;
             }
 
@@ -62,20 +82,30 @@ final class VerificationPlanner
             }
         }
 
-        // Agency leads (D116): with nothing verified yet, try other addresses the agency published itself
-        // (a named person, sales@…), at most two per lead.
-        if ($company->lead_product === LeadProduct::Agency
-            && ! $emails->contains(fn (EmailAddress $e): bool => $e->verification_status === EmailVerificationStatus::Ok)) {
-            $tried = $emails->filter(fn (EmailAddress $e): bool => $e->origin === EmailOrigin::Crawled
-                && ! in_array($e->id, [$company->contact_email_id, $company->careers_email_id], true)
-                && $e->verified_at !== null)->count();
+        if ($company->lead_product !== LeadProduct::Agency) {
+            return null;
+        }
 
-            if ($tried < 2) {
-                return $emails->first(fn (EmailAddress $e): bool => $e->origin === EmailOrigin::Crawled
-                    && $e->person_id === null
-                    && ! in_array($e->id, [$company->contact_email_id, $company->careers_email_id], true)
-                    && $worthChecking($e));
+        $inboxIds = [$company->contact_email_id, $company->careers_email_id];
+
+        // Agency leads (D116): then other addresses the agency published itself (a named person, sales@…), at most
+        // two tried per lead.
+        $published = fn (EmailAddress $e): bool => $e->origin === EmailOrigin::Crawled && $e->person_id === null && ! in_array($e->id, $inboxIds, true);
+
+        if ($emails->filter(fn (EmailAddress $e): bool => $published($e) && $e->verified_at !== null)->count() < 2) {
+            $next = $emails->first(fn (EmailAddress $e): bool => $published($e) && $worthChecking($e));
+
+            if ($next !== null) {
+                return $next;
             }
+        }
+
+        // Last: standard inboxes guessed for agencies that published none (info@, hello@ — GB/US only, D120),
+        // at most two tried.
+        $roleGuess = fn (EmailAddress $e): bool => $e->origin === EmailOrigin::Generated && $e->person_id === null && $e->kind === EmailKind::Contact;
+
+        if ($emails->filter(fn (EmailAddress $e): bool => $roleGuess($e) && $e->verified_at !== null)->count() < self::MAX_ROLE_GUESSES) {
+            return $emails->first(fn (EmailAddress $e): bool => $roleGuess($e) && $worthChecking($e));
         }
 
         return null;
@@ -116,7 +146,7 @@ final class VerificationPlanner
             && in_array(strtolower($subresult), self::NO_MAIL_SERVER_SUBRESULTS, true);
     }
 
-    private function domainOf(string $email): string
+    public function domainOf(string $email): string
     {
         return (string) substr((string) strrchr($email, '@'), 1);
     }
