@@ -8,8 +8,10 @@ use App\DTOs\Classification\Classification;
 use App\DTOs\Classification\ClassificationInput;
 use App\DTOs\Classification\DetectedSignal;
 use App\Enums\CompanyType;
+use App\Enums\LeadProduct;
 use App\Enums\PipelineOutcome;
 use App\Enums\RejectReason;
+use App\Enums\SignalSource;
 use App\Models\Company;
 use App\Models\Person;
 use App\Models\Signal;
@@ -43,19 +45,26 @@ final class ClassifyCompanyAction
             siteOffshoreSignals: $siteOffshoreSignals,
         ));
 
+        // Agency leads were found as agencies (D113): only a recruiter or offshore finding changes that.
+        $foundAsAgency = $company->lead_product === LeadProduct::Agency
+            && $company->signals()->where('source', SignalSource::AgencySearch)->exists();
+        $type = $foundAsAgency && ! in_array($result->type, [CompanyType::Recruiter, CompanyType::Offshore], true)
+            ? CompanyType::Agency
+            : $result->type;
+
         $company->update([
-            'company_type' => $result->type,
+            'company_type' => $type,
             'offshore_evidence' => $result->offshoreSignals === []
                 ? null
                 : array_map(fn (DetectedSignal $s): array => $s->toArray(), $result->offshoreSignals),
         ]);
 
-        $context = ['type' => $result->type->value, 'reasons' => $result->reasons];
+        $context = ['type' => $type->value, 'reasons' => $result->reasons];
 
-        match ($result->type) {
+        match ($type) {
             CompanyType::Recruiter => $company->reject(RejectReason::Recruiter, 'Recruitment agency', $context),
             CompanyType::Offshore => $company->reject(RejectReason::Offshore, 'Offshore development shop', $context),
-            default => $company->recordEvent($company->pipeline_step, PipelineOutcome::Ok, "Classified as {$result->type->value}", $context),
+            default => $company->recordEvent($company->pipeline_step, PipelineOutcome::Ok, "Classified as {$type->value}", $context),
         };
 
         return $result;

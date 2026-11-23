@@ -44,6 +44,17 @@ final class BraveSearchService extends ExternalApiService
     }
 
     /**
+     * One query for agencies in a market (D113): e.g. "shopify agency Toronto". Results are raw — the caller keeps
+     * only agency home pages (AgencyResultSelector). Country is Brave's 2-letter market code.
+     *
+     * @return Collection<int, SearchResult>
+     */
+    public function searchAgencies(string $query, string $country, int $offset = 0): Collection
+    {
+        return $this->search(Str::squish($query), strtoupper($country), $offset);
+    }
+
+    /**
      * One query: `"{name}"`, UK results. Pass the name without its legal suffix (`Company::searchName()`):
      * "Ltd" in the phrase, or a town from the job ad, steers the results to company-data directories (D104).
      * Null when no result looks like the company's own site.
@@ -67,11 +78,12 @@ final class BraveSearchService extends ExternalApiService
     /**
      * @return Collection<int, SearchResult>
      */
-    private function search(string $query): Collection
+    private function search(string $query, string $country = 'GB', int $offset = 0): Collection
     {
         $data = $this->json($this->get('/web/search', [
             'q' => $query,
-            'country' => 'GB',
+            'country' => $country,
+            'offset' => max(0, min(9, $offset)),
             'count' => min(20, max(1, (int) config('services.brave.results_per_query', 10))),
             'safesearch' => 'moderate',
         ], '/web/search'), '/web/search');

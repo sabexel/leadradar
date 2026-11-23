@@ -35,6 +35,7 @@ final class WebsiteCrawlerService extends ExternalApiService
         private readonly LaravelSignalDetector $laravel,
         private readonly OffshoreSignalDetector $offshore,
         private readonly CompanyClassifier $classifier,
+        private readonly TechStackDetector $stack,
     ) {
         parent::__construct($limiter);
     }
@@ -145,6 +146,7 @@ final class WebsiteCrawlerService extends ExternalApiService
             laravelSignals: $this->laravel->detect($html, $text, $pageType, $finalUrl, $this->cookieNames($response)),
             offshoreSignals: $this->offshore->detectInText($text, $finalUrl),
             agencyTerms: $this->classifier->agencyTerms($text),
+            stack: $this->stack->detect($html, $text, $this->cookieNames($response), $pageType),
         );
     }
 

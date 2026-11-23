@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 final class UpdatePipelineSettingsRequest extends FormRequest
 {
@@ -34,6 +35,8 @@ final class UpdatePipelineSettingsRequest extends FormRequest
 
         $registry = $this->input('registry_search');
         $registry = is_array($registry) ? $registry : [];
+        $agency = $this->input('agency');
+        $agency = is_array($agency) ? $agency : [];
         $places = $this->input('website_places');
         $places = is_array($places) ? $places : [];
         $allowedTypes = array_keys(config('leadradar.place_types', []));
@@ -45,6 +48,12 @@ final class UpdatePipelineSettingsRequest extends FormRequest
                 ...$registry,
                 'sic_codes' => $clean($registry['sic_codes'] ?? []),
                 'locations' => $clean($registry['locations'] ?? []),
+            ],
+            'agency' => [
+                ...$agency,
+                'countries' => array_values(array_unique(array_map('strtoupper', $clean($agency['countries'] ?? [])))),
+                'job_keywords' => array_values(array_unique(array_map('mb_strtolower', $clean($agency['job_keywords'] ?? [])))),
+                'job_countries' => array_values(array_unique(array_map('strtolower', $clean($agency['job_countries'] ?? [])))),
             ],
             'website_places' => [
                 ...$places,
@@ -86,6 +95,18 @@ final class UpdatePipelineSettingsRequest extends FormRequest
             'registry_search.locations' => ['array', 'max:20'],
             'registry_search.locations.*' => ['string', 'max:60'],
             'laravel_partners_enabled' => ['required', 'boolean'],
+            // Agency leads of any stack (D113, D117).
+            'agency' => ['required', 'array'],
+            'agency.per_day' => ['required', 'integer', 'min:0', 'max:500'],
+            'agency.queries_per_day' => ['required', 'integer', 'min:0', 'max:100'],
+            'agency.qualify_threshold' => ['required', 'numeric', 'min:0', 'max:10'],
+            'agency.countries' => ['array', 'max:30'],
+            'agency.countries.*' => ['string', Rule::in(array_keys((array) config('leadradar.agency_markets', [])))],
+            'agency.jobs_per_day' => ['required', 'integer', 'min:0', 'max:500'],
+            'agency.job_keywords' => ['array', 'max:20'],
+            'agency.job_keywords.*' => ['string', 'max:60'],
+            'agency.job_countries' => ['array', 'max:20'],
+            'agency.job_countries.*' => ['string', Rule::in(['gb', 'us', 'ca', 'au', 'nz', 'nl', 'be', 'de', 'at', 'fr', 'es', 'it', 'pl', 'ch'])],
             'website_places' => ['required', 'array'],
             'website_places.per_day' => ['required', 'integer', 'min:0', 'max:200'],
             'website_places.min_reviews' => ['required', 'integer', 'min:1', 'max:500'],

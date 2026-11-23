@@ -7,6 +7,7 @@ namespace App\Actions;
 use App\DTOs\CompaniesHouse\CompanyProfile;
 use App\DTOs\CompaniesHouse\CompanySearchResult;
 use App\DTOs\CompaniesHouse\Officer;
+use App\Enums\LeadProduct;
 use App\Enums\LeadStatus;
 use App\Enums\PersonRole;
 use App\Enums\PipelineOutcome;
@@ -37,6 +38,15 @@ final class ApplyCompaniesHouseResultAction
         $match = $this->matcher->select($company->name, $company->location, $results);
         $context = ['candidates' => $match->candidates];
         $label = $registry->label();
+
+        // Agency leads (D113) come with their website: a trading name the registry can't place is no reason to drop
+        // them — they continue without registry data (and so without registry founders).
+        if ($company->lead_product === LeadProduct::Agency && in_array($match->outcome, [RegistryMatchOutcome::NotFound, RegistryMatchOutcome::Ambiguous], true)) {
+            $company->update(['pipeline_step' => PipelineStep::Classify]);
+            $company->recordEvent(PipelineStep::RegistrySearch, PipelineOutcome::Skipped, "No clear {$label} match — continuing as an agency lead without registry data", $context);
+
+            return $company;
+        }
 
         if ($match->outcome === RegistryMatchOutcome::NotFound) {
             $company->reject(RejectReason::NotOnRegistry, "No {$label} match", $context);

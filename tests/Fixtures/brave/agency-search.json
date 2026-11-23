@@ -1,0 +1,52 @@
+{
+    "type": "search",
+    "query": {
+        "original": "shopify agency Toronto",
+        "more_results_available": true
+    },
+    "web": {
+        "type": "search",
+        "results": [
+            {
+                "title": "Top 10 Shopify Agencies in Toronto (2026) | Clutch",
+                "url": "https://clutch.co/ca/agencies/shopify/toronto",
+                "description": "Find the best Shopify agencies."
+            },
+            {
+                "title": "Maple Pixel Studio | Shopify & WordPress Agency Toronto",
+                "url": "https://www.maplepixel.example.ca/",
+                "description": "We design and build Shopify stores."
+            },
+            {
+                "title": "Best Shopify agencies in Toronto - a list",
+                "url": "https://blog.example.com/best-shopify-agencies-toronto",
+                "description": "Our ranking."
+            },
+            {
+                "title": "Northern Commerce - Shopify Plus Partner",
+                "url": "https://northerncommerce.example.com/services",
+                "description": "Shopify Plus agency."
+            },
+            {
+                "title": "Bharat Web Solutions | Shopify Development",
+                "url": "https://bharatweb.example.in/",
+                "description": "Offshore Shopify development."
+            },
+            {
+                "title": "How to pick a Shopify agency | Maple Pixel Studio",
+                "url": "https://www.maplepixel.example.ca/blog/2026/how-to-pick-a-shopify-agency",
+                "description": "Article."
+            },
+            {
+                "title": "Shopify Experts directory",
+                "url": "https://experts.shopify.com/",
+                "description": "Find a Shopify Partner."
+            },
+            {
+                "title": "Lakeside Digital",
+                "url": "https://lakesidedigital.example.com/?utm_source=brave",
+                "description": "Web design agency in Toronto."
+            }
+        ]
+    }
+}

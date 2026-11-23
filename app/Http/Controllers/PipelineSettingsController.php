@@ -52,6 +52,15 @@ final class PipelineSettingsController extends Controller
                     'locations' => array_values((array) Setting::get('source.ch_sic.locations')),
                 ],
                 'laravel_partners_enabled' => (bool) Setting::get('source.laravel_partners.enabled'),
+                'agency' => [
+                    'per_day' => (int) Setting::get('source.agency.per_day'),
+                    'queries_per_day' => (int) Setting::get('source.agency.queries_per_day'),
+                    'qualify_threshold' => (float) Setting::get('agency.qualify_threshold'),
+                    'countries' => array_values((array) Setting::get('source.agency.countries')),
+                    'jobs_per_day' => (int) Setting::get('source.agency_jobs.per_day'),
+                    'job_keywords' => array_values((array) Setting::get('search.agency_keywords')),
+                    'job_countries' => array_values((array) Setting::get('search.agency_job_countries')),
+                ],
                 'website_places' => [
                     'per_day' => (int) Setting::get('source.places.per_day'),
                     'min_reviews' => (int) Setting::get('source.places.min_reviews'),
@@ -87,6 +96,13 @@ final class PipelineSettingsController extends Controller
         Setting::put('source.ch_sic.sic_codes', array_values($data['registry_search']['sic_codes']));
         Setting::put('source.ch_sic.locations', array_values($data['registry_search']['locations']));
         Setting::put('source.laravel_partners.enabled', (bool) $data['laravel_partners_enabled']);
+        Setting::put('source.agency.per_day', (int) $data['agency']['per_day']);
+        Setting::put('source.agency.queries_per_day', (int) $data['agency']['queries_per_day']);
+        Setting::put('agency.qualify_threshold', round((float) $data['agency']['qualify_threshold'], 1));
+        Setting::put('source.agency.countries', array_values($data['agency']['countries']));
+        Setting::put('source.agency_jobs.per_day', (int) $data['agency']['jobs_per_day']);
+        Setting::put('search.agency_keywords', array_values($data['agency']['job_keywords']));
+        Setting::put('search.agency_job_countries', array_values($data['agency']['job_countries']));
         Setting::put('source.places.per_day', (int) $data['website_places']['per_day']);
         Setting::put('source.places.min_reviews', (int) $data['website_places']['min_reviews']);
         Setting::put('source.places.cities', array_values($data['website_places']['cities']));

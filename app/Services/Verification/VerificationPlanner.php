@@ -6,6 +6,7 @@ namespace App\Services\Verification;
 
 use App\Enums\EmailOrigin;
 use App\Enums\EmailVerificationStatus;
+use App\Enums\LeadProduct;
 use App\Models\Company;
 use App\Models\EmailAddress;
 use App\Models\Person;
@@ -58,6 +59,22 @@ final class VerificationPlanner
 
             if ($inbox !== null && $worthChecking($inbox)) {
                 return $inbox;
+            }
+        }
+
+        // Agency leads (D116): with nothing verified yet, try other addresses the agency published itself
+        // (a named person, sales@…), at most two per lead.
+        if ($company->lead_product === LeadProduct::Agency
+            && ! $emails->contains(fn (EmailAddress $e): bool => $e->verification_status === EmailVerificationStatus::Ok)) {
+            $tried = $emails->filter(fn (EmailAddress $e): bool => $e->origin === EmailOrigin::Crawled
+                && ! in_array($e->id, [$company->contact_email_id, $company->careers_email_id], true)
+                && $e->verified_at !== null)->count();
+
+            if ($tried < 2) {
+                return $emails->first(fn (EmailAddress $e): bool => $e->origin === EmailOrigin::Crawled
+                    && $e->person_id === null
+                    && ! in_array($e->id, [$company->contact_email_id, $company->careers_email_id], true)
+                    && $worthChecking($e));
             }
         }
 

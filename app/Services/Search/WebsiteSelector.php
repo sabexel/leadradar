@@ -81,7 +81,7 @@ final class WebsiteSelector
         return false;
     }
 
-    private function isHomePage(string $url): bool
+    public function isHomePage(string $url): bool
     {
         $path = (string) parse_url($url, PHP_URL_PATH);
 

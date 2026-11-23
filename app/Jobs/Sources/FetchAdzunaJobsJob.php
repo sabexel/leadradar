@@ -8,6 +8,7 @@ use App\Actions\IngestJobAdAction;
 use App\DTOs\JobBoards\JobAdData;
 use App\DTOs\JobBoards\JobSearchPage;
 use App\Enums\ExternalService;
+use App\Enums\LeadProduct;
 use App\Enums\SignalSource;
 use App\Jobs\Concerns\InteractsWithServiceLimits;
 use App\Models\ScrapeRun;
@@ -32,13 +33,15 @@ final class FetchAdzunaJobsJob implements ShouldBeUnique, ShouldQueue
         public string $keywords,
         public int $page = 1,
         public ?int $scrapeRunId = null,
+        public string $country = 'gb',
+        public string $product = 'laravel',
     ) {
         $this->onQueue('sources');
     }
 
     public function uniqueId(): string
     {
-        return "adzuna-search:{$this->keywords}:{$this->page}:{$this->scrapeRunId}";
+        return "adzuna-search:{$this->country}:{$this->product}:{$this->keywords}:{$this->page}:{$this->scrapeRunId}";
     }
 
     /**
@@ -58,7 +61,7 @@ final class FetchAdzunaJobsJob implements ShouldBeUnique, ShouldQueue
         $maxAgeDays = (int) Setting::get('signal.max_age_days');
 
         [$called, $result] = $this->withinServiceLimits(
-            fn (): JobSearchPage => $adzuna->search($this->keywords, $this->page, $maxAgeDays),
+            fn (): JobSearchPage => $adzuna->search($this->keywords, $this->page, $maxAgeDays, AdzunaService::MAX_RESULTS_PER_PAGE, $this->country),
         );
 
         if (! $called || $result === null) {
@@ -76,11 +79,18 @@ final class FetchAdzunaJobsJob implements ShouldBeUnique, ShouldQueue
         $run = $this->scrapeRunId === null ? null : ScrapeRun::find($this->scrapeRunId);
 
         $fresh->reject(fn (JobAdData $ad): bool => in_array($ad->externalId, $known, true))
-            ->each(fn (JobAdData $ad) => $ingest->run($ad, $run));
+            ->each(function (JobAdData $ad) use ($ingest, $run): void {
+                // Agency job ads (D117) have their own daily cap of new companies.
+                if ($this->product === LeadProduct::Agency->value && $ingest->agencyJobsRemainingToday() === 0) {
+                    return;
+                }
+
+                $ingest->run($ad, $run, LeadProduct::from($this->product), strtoupper($this->country));
+            });
 
         // The next page re-checks the daily target before making its call.
         if ($this->shouldFetchNextPage($result, $maxAgeDays)) {
-            self::dispatch($this->keywords, $this->page + 1, $this->scrapeRunId);
+            self::dispatch($this->keywords, $this->page + 1, $this->scrapeRunId, $this->country, $this->product);
         }
     }
 
@@ -90,7 +100,9 @@ final class FetchAdzunaJobsJob implements ShouldBeUnique, ShouldQueue
             return false;
         }
 
-        if ($this->page >= (int) config('services.adzuna.max_pages', 10)) {
+        $maxPages = $this->product === LeadProduct::Agency->value ? 2 : (int) config('services.adzuna.max_pages', 10);
+
+        if ($this->page >= $maxPages) {
             return false;
         }
 

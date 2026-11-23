@@ -16,6 +16,7 @@ enum SignalSource: string
     case LaravelPartners = 'laravel_partners';
     case CompaniesHouseSic = 'companies_house_sic';
     case GooglePlaces = 'google_places';
+    case AgencySearch = 'agency_search';
 
     public function label(): string
     {
@@ -27,6 +28,7 @@ enum SignalSource: string
             self::LaravelPartners => 'Laravel Partners',
             self::CompaniesHouseSic => 'Companies House (SIC)',
             self::GooglePlaces => 'Google Places (no website)',
+            self::AgencySearch => 'Agency search',
         };
     }
 }

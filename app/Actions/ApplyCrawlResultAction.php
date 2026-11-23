@@ -7,8 +7,10 @@ namespace App\Actions;
 use App\DTOs\Classification\DetectedSignal;
 use App\DTOs\Crawl\CrawlResult;
 use App\DTOs\Crawl\ExtractedEmail;
+use App\Enums\CompanyType;
 use App\Enums\EmailKind;
 use App\Enums\EmailOrigin;
+use App\Enums\LeadProduct;
 use App\Enums\PipelineOutcome;
 use App\Enums\PipelineStep;
 use App\Enums\RejectReason;
@@ -52,12 +54,17 @@ final class ApplyCrawlResultAction
                         'laravel' => array_map(fn (DetectedSignal $s): array => $s->toArray(), $result->laravelSignals),
                         'offshore' => array_map(fn (DetectedSignal $s): array => $s->toArray(), $result->offshoreSignals),
                         'agency_terms' => $result->agencyTerms,
+                        'stack' => $result->stack,
                     ], fn (mixed $v): bool => $v !== null && $v !== []),
                 ],
             );
 
             foreach ($result->emails as $email) {
                 $this->storeEmail($company, $email);
+            }
+
+            if ($result->stack !== []) {
+                $company->update(['tech_stack' => array_values(array_unique([...($company->tech_stack ?? []), ...$result->stack]))]);
             }
 
             if ($result->laravelSignals !== []) {
@@ -103,7 +110,18 @@ final class ApplyCrawlResultAction
 
         // The Laravel gate (docs/06) can't change after the crawl — no later step adds evidence — so a company
         // without it stops here, before any MillionVerifier or Brave credit is spent on its people (D107).
-        if (! $this->scoring->hasLaravelEvidence($company->refresh())) {
+        // Agency leads of any stack (D113) have no Laravel gate, so they always continue.
+        $company->refresh();
+
+        // The company's own site says it is a recruiter (D118) — whatever its name or job ad said.
+        if (in_array('flag:recruiter', $company->tech_stack ?? [], true)) {
+            $company->update(['company_type' => CompanyType::Recruiter, 'pipeline_step' => PipelineStep::Done]);
+            $company->reject(RejectReason::Recruiter, 'Its own website describes it as a recruitment/staffing business');
+
+            return $company;
+        }
+
+        if ($company->lead_product === LeadProduct::Laravel && ! $this->scoring->hasLaravelEvidence($company)) {
             $company->update(['pipeline_step' => PipelineStep::Done]);
             $company->reject(RejectReason::NoLaravelEvidence, 'No Laravel evidence on the site or in a job ad — stopped before email checks');
 

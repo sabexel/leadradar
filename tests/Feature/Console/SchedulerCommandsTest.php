@@ -26,6 +26,9 @@ use Illuminate\Support\Facades\Queue;
 beforeEach(function () {
     CarbonImmutable::setTestNow('2026-11-04 06:10:00');
     config(['services.reed.key' => 'test-reed-key', 'services.adzuna.app_id' => 'test-id', 'services.adzuna.app_key' => 'test-key']);
+    // These tests cover the Laravel job-board searches; the agency sources (D113, D117) have their own tests.
+    Setting::put('source.agency.per_day', 0);
+    Setting::put('source.agency_jobs.per_day', 0);
     Queue::fake();
 });
 

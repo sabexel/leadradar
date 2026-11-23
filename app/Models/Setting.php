@@ -44,6 +44,17 @@ class Setting extends Model
         'source.ch_sic.sic_codes' => ['62012', '62020', '62090', '73110'],
         'source.ch_sic.locations' => ['Manchester', 'Leeds', 'Birmingham', 'Bristol', 'London'],
         'source.ch_sic.min_age_years' => 2,
+        // Agency leads of any stack via web search (D113). New agencies per London day; 0 turns it off.
+        'source.agency.per_day' => 60,
+        'source.agency.queries_per_day' => 15,
+        'source.agency.countries' => ['GB', 'US', 'CA', 'AU', 'IE', 'NZ', 'NL', 'BE', 'DK', 'SE', 'NO', 'FI', 'DE', 'AT'],
+        'source.agency.cursor' => 0,
+        // Agency leads have no Laravel gate, so their own threshold (D116).
+        'agency.qualify_threshold' => 4.5,
+        // Job ads for any stack in every Adzuna market (D117): phrases, Adzuna country codes, new companies a day.
+        'search.agency_keywords' => ['wordpress developer', 'shopify developer', 'woocommerce developer'],
+        'search.agency_job_countries' => ['gb', 'us', 'ca', 'au', 'nz', 'nl', 'be', 'de', 'at'],
+        'source.agency_jobs.per_day' => 40,
         // The position per SIC + location is kept in `source.ch_sic.cursor.{sic}|{location}` rows (FetchCompaniesHouseSicJob).
         // laravel.com/partners (P4.1, D108): one page request per discovery run.
         'source.laravel_partners.enabled' => true,

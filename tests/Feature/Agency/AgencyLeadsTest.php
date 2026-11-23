@@ -1,0 +1,199 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Actions\ApplyCrawlResultAction;
+use App\Actions\BuildFounderEmailCandidatesAction;
+use App\Actions\IngestAgencyAction;
+use App\Actions\IngestJobAdAction;
+use App\Actions\QualifyCompanyAction;
+use App\DTOs\JobBoards\JobAdData;
+use App\Enums\CompanyType;
+use App\Enums\EmailKind;
+use App\Enums\EmailOrigin;
+use App\Enums\EmailVerificationStatus;
+use App\Enums\LeadProduct;
+use App\Enums\LeadStatus;
+use App\Enums\PageType;
+use App\Enums\PipelineStep;
+use App\Enums\RejectReason;
+use App\Enums\SignalSource;
+use App\Enums\SuppressionType;
+use App\Jobs\Enrichment\CrawlCompanyWebsiteJob;
+use App\Jobs\Enrichment\SearchCompaniesHouseJob;
+use App\Jobs\Sources\FetchAgencySearchJob;
+use App\Models\Company;
+use App\Models\EmailAddress;
+use App\Models\Person;
+use App\Models\Setting;
+use App\Models\Signal;
+use App\Models\Suppression;
+use App\Services\Crawler\TechStackDetector;
+use App\Services\Search\AgencyResultSelector;
+use App\Services\Search\BraveSearchService;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
+
+beforeEach(function () {
+    Queue::fake();
+    config(['services.brave.key' => 'test-brave-key']);
+});
+
+function runAgencySearch(string $country, string $city = 'Toronto'): void
+{
+    Http::fake(['api.search.brave.com/*' => Http::response(jsonFixture('brave/agency-search.json'))]);
+
+    (new FetchAgencySearchJob('shopify agency', $city, $country))->withFakeQueueInteractions()->handle(
+        app(BraveSearchService::class),
+        app(AgencyResultSelector::class),
+        app(IngestAgencyAction::class),
+    );
+}
+
+/**
+ * An agency lead that has been crawled: website known, a contact inbox, a stack.
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function crawledAgency(array $attributes = [], EmailVerificationStatus $inbox = EmailVerificationStatus::Ok): Company
+{
+    $company = Company::factory()->create([
+        'lead_product' => LeadProduct::Agency,
+        'company_type' => CompanyType::Agency,
+        'country' => 'CA',
+        'registration_number' => null,
+        'registry' => null,
+        'company_status' => null,
+        'company_kind' => null,
+        'accounts_category' => null,
+        'incorporated_on' => null,
+        'tech_stack' => ['built:wordpress', 'offers:wordpress', 'offers:shopify'],
+        'status' => LeadStatus::Enriching,
+        'pipeline_step' => PipelineStep::Qualify,
+        ...$attributes,
+    ]);
+    Signal::factory()->for($company)->create(['source' => SignalSource::AgencySearch]);
+    $email = EmailAddress::factory()->for($company)->verified($inbox)->create([
+        'email' => 'hello@'.$company->domain,
+        'kind' => EmailKind::Contact,
+        'origin' => EmailOrigin::Crawled,
+    ]);
+    $company->update(['contact_email_id' => $email->id]);
+
+    return $company->refresh();
+}
+
+it('turns agency search results into Agency leads in the pipeline', function () {
+    runAgencySearch('CA');
+
+    $leads = Company::query()->orderBy('id')->get();
+
+    expect($leads->pluck('domain')->all())->toBe(['maplepixel.example.ca', 'northerncommerce.example.com', 'lakesidedigital.example.com'])
+        ->and($leads->every(fn (Company $c) => $c->lead_product === LeadProduct::Agency && $c->country === 'CA' && $c->location === 'Toronto'))->toBeTrue()
+        ->and($leads->first()->company_type)->toBe(CompanyType::Agency)
+        ->and($leads->first()->signals()->sole()->source)->toBe(SignalSource::AgencySearch)
+        // Outside the UK there is no registry step: classify → known website → crawl.
+        ->and($leads->first()->pipeline_step)->toBe(PipelineStep::Crawl);
+
+    Queue::assertPushed(CrawlCompanyWebsiteJob::class, 3);
+});
+
+it('sends UK agencies to the free Companies House search first, and flags consent countries', function () {
+    runAgencySearch('GB', 'Leeds');
+    Queue::assertPushed(SearchCompaniesHouseJob::class, 2);
+
+    runAgencySearch('DE', 'Berlin');
+    // Same domains: nothing new (dedupe by domain across markets).
+    expect(Company::count())->toBe(2);
+
+    Company::query()->delete();
+    runAgencySearch('DE', 'Berlin');
+    expect(Company::query()->pluck('email_consent_required')->unique()->all())->toBe([true]);
+});
+
+it('stops at the daily cap and skips suppressed domains', function () {
+    Setting::put('source.agency.per_day', 1);
+    Suppression::factory()->create(['type' => SuppressionType::Domain, 'value' => 'maplepixel.example.ca']);
+
+    runAgencySearch('CA');
+
+    expect(Company::query()->pluck('domain')->all())->toBe(['northerncommerce.example.com']);
+});
+
+it('qualifies an agency with a verified inbox and a served stack — no Laravel evidence needed', function () {
+    $company = crawledAgency();
+
+    $score = app(QualifyCompanyAction::class)->run($company);
+
+    expect($company->refresh()->status)->toBe(LeadStatus::Qualified)
+        ->and($score->breakdown['stack']['points'])->toBe(3.0)
+        ->and($score->breakdown['company_fit']['points'])->toBe(1.5)
+        ->and($score->breakdown['company_inboxes']['points'])->toBe(1.5)
+        ->and($score->total)->toBe(6.0);
+});
+
+it('rejects an agency without a verified address, and one that builds nothing we serve', function () {
+    $noEmail = crawledAgency([], EmailVerificationStatus::Invalid);
+    app(QualifyCompanyAction::class)->run($noEmail);
+
+    $noStack = crawledAgency(['tech_stack' => ['built:wix']]);
+    app(QualifyCompanyAction::class)->run($noStack);
+
+    expect($noEmail->refresh()->reject_reason)->toBe(RejectReason::NoValidEmail)
+        ->and($noStack->refresh()->reject_reason)->toBe(RejectReason::BelowThreshold);
+});
+
+it('lets agency leads past the crawl without Laravel evidence, but stops self-declared recruiters', function () {
+    $agency = crawledAgency(['pipeline_step' => PipelineStep::Crawl, 'laravel_evidence' => null]);
+    app(ApplyCrawlResultAction::class)->finish($agency);
+    expect($agency->refresh()->pipeline_step)->toBe(PipelineStep::BuildEmailCandidates);
+
+    $recruiter = crawledAgency(['pipeline_step' => PipelineStep::Crawl, 'tech_stack' => ['flag:recruiter']]);
+    app(ApplyCrawlResultAction::class)->finish($recruiter);
+    expect($recruiter->refresh()->reject_reason)->toBe(RejectReason::Recruiter);
+});
+
+it('detects stacks and recruiters from page content, ignoring "no agencies" notices', function () {
+    $detector = new TechStackDetector;
+    $html = '<link href="/wp-content/themes/x.css"><script src="https://cdn.shopify.com/s.js"></script>';
+
+    expect($detector->detect($html, 'We build WordPress and WooCommerce sites, and Shopify Plus stores.', ['laravel_session']))
+        ->toEqual(['built:wordpress', 'built:shopify', 'built:laravel', 'offers:wordpress', 'offers:woocommerce', 'offers:shopify'])
+        ->and($detector->detect('', "We're a specialist tech recruitment agency in Leeds.", [], PageType::Home))->toContain('flag:recruiter')
+        ->and($detector->detect('', 'We are a recruitment agency.', [], PageType::Careers))->not->toContain('flag:recruiter')
+        ->and($detector->detect('', 'We are a web agency. No recruitment agencies please.', [], PageType::Home))->not->toContain('flag:recruiter');
+});
+
+it('never guesses founder addresses outside the countries that allow it', function () {
+    $company = Company::factory()->create(['country' => 'CA', 'lead_product' => LeadProduct::Agency, 'pipeline_step' => PipelineStep::BuildEmailCandidates]);
+    Person::factory()->for($company)->create(['first_name' => 'Jane', 'last_name' => 'Example', 'position' => 1]);
+
+    app(BuildFounderEmailCandidatesAction::class)->run($company);
+
+    expect(EmailAddress::query()->where('origin', EmailOrigin::Generated)->count())->toBe(0)
+        ->and($company->refresh()->pipeline_step)->toBe(PipelineStep::VerifyEmails);
+});
+
+it('ingests agency job ads abroad as Agency leads that go straight to the website search', function () {
+    $ad = new JobAdData(
+        source: SignalSource::Adzuna,
+        externalId: 'us-1',
+        title: 'Shopify Developer',
+        employerName: 'Example Commerce Inc',
+        employerExternalId: null,
+        location: 'Austin, TX',
+        description: 'Our agency needs a Shopify developer.',
+        url: 'https://www.adzuna.com/details/1',
+        externalUrl: null,
+        postedAt: now()->subDay()->toImmutable(),
+        raw: [],
+    );
+
+    app(IngestJobAdAction::class)->run($ad, null, LeadProduct::Agency, 'us');
+
+    $company = Company::sole();
+    expect($company->lead_product)->toBe(LeadProduct::Agency)
+        ->and($company->country)->toBe('US')
+        ->and($company->status)->toBe(LeadStatus::Enriching)
+        ->and($company->pipeline_step)->toBe(PipelineStep::FindWebsite);
+});

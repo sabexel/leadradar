@@ -127,6 +127,24 @@ return [
             'pinterest.com', 'github.com', 'gitlab.com', 'medium.com', 'wikipedia.org', 'google.com',
             'google.co.uk', 'bing.com', 'apple.com',
         ],
+        // Extra exclusions for agency searches (D113): platforms, marketplaces, agency rankings and lists.
+        'agency_blocked_domains' => [
+            'wordpress.org', 'wordpress.com', 'wpengine.com', 'shopify.com', 'shopify.co.uk', 'wix.com',
+            'squarespace.com', 'webflow.com', 'godaddy.com', 'hostinger.com', 'envato.com', 'themeforest.net',
+            'codecanyon.net', 'g2.com', 'capterra.com', 'expertise.com', 'houzz.com', 'thumbtack.com', 'forbes.com',
+            'hubspot.com', 'semrush.com', 'ahrefs.com', 'reddit.com', 'quora.com', 'w3techs.com', 'builtwith.com',
+            'digitalagencynetwork.com', 'agencyvista.com', '50pros.com', 'topdevelopers.co', 'techreviewer.co',
+            'selectedfirms.co', 'appfutura.com', 'itfirms.co', 'superbcompanies.com', 'designrush.com',
+            'goodfirms.co', 'clutch.co', 'sortlist.com', 'sortlist.be', 'sortlist.nl', 'sortlist.de', 'sortlist.fr',
+            'themanifest.com', 'upcity.com', 'agencyspotter.com', 'bark.com', 'yelp.ca', 'yelp.com.au',
+            'yellowpages.com', 'yellowpages.ca', 'yellowpages.com.au', 'truelocal.com.au', 'hotfrog.com',
+            'gelbeseiten.de', 'goldenpages.ie', 'detelefoongids.nl', 'trustpilot.com', 'productreview.com.au',
+            'freelancer.com', 'freelancer.co.uk', 'toptal.com', 'guru.com', 'contra.com', 'dribbble.com',
+            'behance.net', 'awwwards.com', 'cssdesignawards.com', 'wikipedia.org', 'youtube.com', 'linkedin.com',
+            'agencies.shopify.com', 'experts.shopify.com', 'partners.shopify.com', 'woocommerce.com',
+            'codeable.io', 'wpbeginner.com', 'wpexplorer.com', 'elementor.com', 'semji.com', 'medium.com',
+            'businessofapps.com', 'digital.com', 'clutch.com', 'goodfirms.com', 'agencyanalytics.com',
+        ],
     ],
 
     'crawler' => [

@@ -38,6 +38,15 @@ type Settings = {
         locations: string[];
     };
     laravel_partners_enabled: boolean;
+    agency: {
+        per_day: number;
+        queries_per_day: number;
+        qualify_threshold: number;
+        countries: string[];
+        jobs_per_day: number;
+        job_keywords: string[];
+        job_countries: string[];
+    };
     website_places: {
         per_day: number;
         min_reviews: number;
@@ -95,6 +104,13 @@ export default function ConfigurationEdit({
         places_min_reviews: String(settings.website_places.min_reviews),
         places_cities: settings.website_places.cities.join('\n'),
         places_types: settings.website_places.types,
+        agency_per_day: String(settings.agency.per_day),
+        agency_queries_per_day: String(settings.agency.queries_per_day),
+        agency_qualify_threshold: String(settings.agency.qualify_threshold),
+        agency_countries: settings.agency.countries.join(', '),
+        agency_jobs_per_day: String(settings.agency.jobs_per_day),
+        agency_job_keywords: settings.agency.job_keywords.join('\n'),
+        agency_job_countries: settings.agency.job_countries.join(', '),
     });
 
     const errors = form.errors as Record<string, string | undefined>;
@@ -119,9 +135,25 @@ export default function ConfigurationEdit({
                 places_min_reviews,
                 places_cities,
                 places_types,
+                agency_per_day,
+                agency_queries_per_day,
+                agency_qualify_threshold,
+                agency_countries,
+                agency_jobs_per_day,
+                agency_job_keywords,
+                agency_job_countries,
                 ...data
             }) => ({
                 ...data,
+                agency: {
+                    per_day: agency_per_day,
+                    queries_per_day: agency_queries_per_day,
+                    qualify_threshold: agency_qualify_threshold,
+                    countries: agency_countries.split(/[\s,]+/),
+                    jobs_per_day: agency_jobs_per_day,
+                    job_keywords: agency_job_keywords.split('\n'),
+                    job_countries: agency_job_countries.split(/[\s,]+/),
+                },
                 keywords: data.keywords.split('\n'),
                 countries: data.countries.split(/[\s,]+/),
                 registry_search: {
@@ -146,6 +178,133 @@ export default function ConfigurationEdit({
             <Head title="Settings" />
             <div className="flex h-full flex-1 flex-col gap-4 p-4 lg:max-w-4xl">
                 <form onSubmit={submit} className="flex flex-col gap-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Agency leads (any stack)</CardTitle>
+                            <CardDescription>
+                                Web, WordPress, Shopify and Laravel agencies in
+                                every enabled market, found by web search and by
+                                job ads. A verified email is required; no
+                                Laravel evidence. 0 turns a source off.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="grid gap-4 sm:grid-cols-3">
+                            <NumberField
+                                id="agency.per_day"
+                                label="New agencies per day (search)"
+                                hint="Each costs about 1–3 verification credits"
+                                value={form.data.agency_per_day}
+                                onChange={(v) =>
+                                    form.setData('agency_per_day', v)
+                                }
+                                error={errors['agency.per_day']}
+                                min={0}
+                                max={500}
+                            />
+                            <NumberField
+                                id="agency.queries_per_day"
+                                label="Searches per day"
+                                hint="Brave queries; each finds a few agencies"
+                                value={form.data.agency_queries_per_day}
+                                onChange={(v) =>
+                                    form.setData('agency_queries_per_day', v)
+                                }
+                                error={errors['agency.queries_per_day']}
+                                min={0}
+                                max={100}
+                            />
+                            <NumberField
+                                id="agency.qualify_threshold"
+                                label="Agency qualify threshold (0–10)"
+                                value={form.data.agency_qualify_threshold}
+                                onChange={(v) =>
+                                    form.setData('agency_qualify_threshold', v)
+                                }
+                                error={errors['agency.qualify_threshold']}
+                                min={0}
+                                max={10}
+                                step={0.1}
+                            />
+                            <div className="grid gap-2 sm:col-span-3">
+                                <Label htmlFor="agency_countries">
+                                    Markets (country codes)
+                                </Label>
+                                <Input
+                                    id="agency_countries"
+                                    value={form.data.agency_countries}
+                                    onChange={(e) =>
+                                        form.setData(
+                                            'agency_countries',
+                                            e.target.value,
+                                        )
+                                    }
+                                    placeholder="GB, US, CA, AU"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Available: GB, US, CA, AU, NZ, IE, NL, BE,
+                                    DE, AT, DK, SE, NO, FI. DE and AT leads are
+                                    flagged: cold email needs consent there.
+                                </p>
+                                <InputError
+                                    message={
+                                        errors['agency.countries'] ??
+                                        firstNested(errors, 'agency.countries.')
+                                    }
+                                />
+                            </div>
+                            <NumberField
+                                id="agency.jobs_per_day"
+                                label="New companies per day (job ads)"
+                                value={form.data.agency_jobs_per_day}
+                                onChange={(v) =>
+                                    form.setData('agency_jobs_per_day', v)
+                                }
+                                error={errors['agency.jobs_per_day']}
+                                min={0}
+                                max={500}
+                            />
+                            <div className="grid gap-2">
+                                <Label htmlFor="agency_job_keywords">
+                                    Job-ad phrases
+                                </Label>
+                                <textarea
+                                    id="agency_job_keywords"
+                                    rows={3}
+                                    value={form.data.agency_job_keywords}
+                                    onChange={(e) =>
+                                        form.setData(
+                                            'agency_job_keywords',
+                                            e.target.value,
+                                        )
+                                    }
+                                    className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                />
+                            </div>
+                            <div className="grid content-start gap-2">
+                                <Label htmlFor="agency_job_countries">
+                                    Job-ad countries (Adzuna codes)
+                                </Label>
+                                <Input
+                                    id="agency_job_countries"
+                                    value={form.data.agency_job_countries}
+                                    onChange={(e) =>
+                                        form.setData(
+                                            'agency_job_countries',
+                                            e.target.value,
+                                        )
+                                    }
+                                    placeholder="gb, us, ca, au"
+                                />
+                                <InputError
+                                    message={firstNested(
+                                        errors,
+                                        'agency.job_countries',
+                                    )}
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
+
                     <Card>
                         <CardHeader>
                             <CardTitle>Targets</CardTitle>

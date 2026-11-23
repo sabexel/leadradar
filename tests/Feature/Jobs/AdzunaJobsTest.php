@@ -119,6 +119,6 @@ it('runs on the sources queue with a unique id', function () {
     $job = new FetchAdzunaJobsJob('laravel', 4, 9);
 
     expect($job->queue)->toBe('sources')
-        ->and($job->uniqueId())->toBe('adzuna-search:laravel:4:9')
+        ->and($job->uniqueId())->toBe('adzuna-search:gb:laravel:laravel:4:9')
         ->and($job->maxExceptions)->toBe(3);
 });

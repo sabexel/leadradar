@@ -5,14 +5,18 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\DTOs\JobBoards\JobAdData;
+use App\Enums\LeadProduct;
 use App\Enums\LeadStatus;
 use App\Enums\PipelineOutcome;
 use App\Enums\PipelineStep;
+use App\Enums\SignalSource;
 use App\Models\Company;
 use App\Models\ScrapeRun;
+use App\Models\Setting;
 use App\Models\Signal;
 use App\Services\Classification\RecruiterDetector;
 use App\Services\Dedupe\CompanyMatcher;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -34,10 +38,29 @@ final class IngestJobAdAction
     ) {}
 
     /**
+     * New companies today from agency job ads (D117) — capped by `source.agency_jobs.per_day`.
+     *
+     * @phpstan-impure
+     */
+    public function agencyJobsRemainingToday(): int
+    {
+        $timezone = (string) config('leadradar.timezone', 'Europe/London');
+        $created = Company::query()
+            ->where('lead_product', LeadProduct::Agency)
+            ->where('created_at', '>=', CarbonImmutable::now($timezone)->startOfDay()->utc())
+            ->whereHas('signals', fn ($q) => $q->whereIn('source', [SignalSource::Adzuna, SignalSource::Reed]))
+            ->count();
+
+        return max(0, (int) Setting::get('source.agency_jobs.per_day') - $created);
+    }
+
+    /**
      * @return Signal|null null when the ad was skipped (recruiter or unusable employer name)
      */
-    public function run(JobAdData $ad, ?ScrapeRun $run = null): ?Signal
+    public function run(JobAdData $ad, ?ScrapeRun $run = null, LeadProduct $product = LeadProduct::Laravel, string $country = 'GB'): ?Signal
     {
+        $country = strtoupper($country);
+
         if ($this->recruiters->isRecruiterAd($ad)) {
             return null;
         }
@@ -49,8 +72,8 @@ final class IngestJobAdAction
         }
 
         // Serialise per employer so concurrent workers can't create the same company twice.
-        [$signal, $company, $created] = Cache::lock("ingest-company:{$normalised}", 10)->block(5, function () use ($ad, $normalised) {
-            return DB::transaction(function () use ($ad, $normalised) {
+        [$signal, $company, $created] = Cache::lock("ingest-company:{$normalised}", 10)->block(5, function () use ($ad, $normalised, $product, $country) {
+            return DB::transaction(function () use ($ad, $normalised, $product, $country) {
                 $company = Company::query()->where('normalised_name', $normalised)->oldest('id')->first();
                 $created = false;
 
@@ -58,10 +81,13 @@ final class IngestJobAdAction
                     $company = Company::create([
                         'name' => Str::squish($ad->employerName),
                         'normalised_name' => $normalised,
-                        'country' => 'GB',
+                        'country' => $country,
                         'location' => $ad->location,
+                        'lead_product' => $product,
+                        'email_consent_required' => in_array($country, (array) config('leadradar.email_consent_countries', []), true),
                         'status' => LeadStatus::Discovered,
-                        'pipeline_step' => PipelineStep::RegistrySearch,
+                        // Only the UK has a free registry; abroad an agency-ad lead goes to the website search (D117).
+                        'pipeline_step' => $country === 'GB' || $product === LeadProduct::Laravel ? PipelineStep::RegistrySearch : PipelineStep::FindWebsite,
                     ]);
                     $created = true;
                 }

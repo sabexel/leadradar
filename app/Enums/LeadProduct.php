@@ -12,12 +12,14 @@ enum LeadProduct: string
 {
     case Laravel = 'laravel';
     case Website = 'website';
+    case Agency = 'agency';
 
     public function label(): string
     {
         return match ($this) {
             self::Laravel => 'Laravel',
             self::Website => 'Needs a website',
+            self::Agency => 'Agency (any stack)',
         };
     }
 }

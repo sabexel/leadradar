@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\DTOs\Scoring\LeadScore;
+use App\Enums\LeadProduct;
 use App\Enums\LeadStatus;
 use App\Enums\PipelineOutcome;
 use App\Enums\PipelineStep;
@@ -23,7 +24,7 @@ final class QualifyCompanyAction
     public function run(Company $company): LeadScore
     {
         $score = $this->scoring->score($company);
-        $threshold = (float) Setting::get('qualify_threshold');
+        $threshold = (float) Setting::get($company->lead_product === LeadProduct::Agency ? 'agency.qualify_threshold' : 'qualify_threshold');
 
         $reason = $score->failedGate ?? ($score->total < $threshold ? RejectReason::BelowThreshold : null);
 

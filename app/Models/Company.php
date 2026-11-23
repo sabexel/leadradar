@@ -45,6 +45,7 @@ use Illuminate\Support\Str;
  * @property int|null $review_count
  * @property string|null $phone
  * @property bool $email_consent_required
+ * @property list<string>|null $tech_stack
  * @property int|null $contact_email_id
  * @property int|null $careers_email_id
  * @property CompanyType $company_type
@@ -66,7 +67,7 @@ use Illuminate\Support\Str;
     'name', 'legal_name', 'normalised_name', 'website', 'domain', 'country', 'location',
     'registered_address', 'registration_number', 'registry', 'company_status', 'company_kind',
     'incorporated_on', 'sic_codes', 'accounts_category', 'registry_no_mailing', 'contact_email_id', 'careers_email_id',
-    'company_type', 'lead_product', 'google_place_id', 'review_count', 'phone', 'email_consent_required',
+    'company_type', 'lead_product', 'google_place_id', 'review_count', 'phone', 'email_consent_required', 'tech_stack',
     'laravel_evidence', 'offshore_evidence', 'status', 'pipeline_step', 'reject_reason',
     'score', 'score_breakdown', 'outreach_status', 'contacted_at', 'qualified_at', 'notes',
 ])]
@@ -102,6 +103,7 @@ class Company extends Model
             'lead_product' => LeadProduct::class,
             'review_count' => 'integer',
             'email_consent_required' => 'boolean',
+            'tech_stack' => 'array',
             'laravel_evidence' => 'array',
             'offshore_evidence' => 'array',
             'status' => LeadStatus::class,

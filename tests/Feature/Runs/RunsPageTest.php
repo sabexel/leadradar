@@ -120,6 +120,8 @@ it('runs discovery now as a manual run', function () {
 it('says why discovery could not start', function () {
     config(['services.reed.key' => null, 'services.adzuna.app_id' => null, 'services.adzuna.app_key' => null, 'services.companies_house.key' => null]);
     Setting::put('source.laravel_partners.enabled', false);
+    Setting::put('source.agency.per_day', 0);
+    Setting::put('source.agency_jobs.per_day', 0);
 
     $this->post(route('runs.discover'))
         ->assertInertiaFlash('toast.type', 'warning')

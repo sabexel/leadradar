@@ -39,9 +39,9 @@ final class AdzunaService extends ExternalApiService
     /**
      * One page (1-based) of ads, newest first, no older than `$maxDaysOld`.
      */
-    public function search(string $keywords, int $page = 1, int $maxDaysOld = 30, int $perPage = self::MAX_RESULTS_PER_PAGE): JobSearchPage
+    public function search(string $keywords, int $page = 1, int $maxDaysOld = 30, int $perPage = self::MAX_RESULTS_PER_PAGE, ?string $country = null): JobSearchPage
     {
-        $country = (string) config('services.adzuna.country', 'gb');
+        $country = strtolower($country ?? (string) config('services.adzuna.country', 'gb'));
         $page = max(1, $page);
         $endpoint = "/jobs/{$country}/search/{page}";
 

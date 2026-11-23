@@ -4,15 +4,18 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Enums\LeadProduct;
 use App\Enums\RunTrigger;
 use App\Enums\ScrapeRunStatus;
 use App\Jobs\Sources\FetchAdzunaJobsJob;
+use App\Jobs\Sources\FetchAgencySearchJob;
 use App\Jobs\Sources\FetchCompaniesHouseSicJob;
 use App\Jobs\Sources\FetchGooglePlacesJob;
 use App\Jobs\Sources\FetchLaravelPartnersJob;
 use App\Jobs\Sources\FetchReedJobsJob;
 use App\Models\ScrapeRun;
 use App\Models\Setting;
+use App\Services\Search\AgencySearchPlanner;
 use App\Services\Support\DailyTarget;
 use Carbon\CarbonImmutable;
 
@@ -26,6 +29,8 @@ final class StartDiscoveryRunAction
         private readonly DailyTarget $target,
         private readonly IngestRegistryCompanyAction $registry,
         private readonly IngestWebsitePlaceAction $places,
+        private readonly IngestAgencyAction $agencies,
+        private readonly AgencySearchPlanner $agencySearches,
     ) {}
 
     /**
@@ -157,6 +162,43 @@ final class StartDiscoveryRunAction
                         FetchGooglePlacesJob::dispatch($city, $type, $share, 1, null, $run->id);
                         $dispatched[] = "google_places:{$type}:{$city}";
                     }
+                }
+            }
+        }
+
+        // Job ads for WordPress / Shopify / WooCommerce work in every Adzuna market (D117).
+        if ((int) Setting::get('source.agency_jobs.per_day') > 0) {
+            if (! filled(config('services.adzuna.app_id')) || ! filled(config('services.adzuna.app_key'))) {
+                $skipped[] = 'agency job ads: ADZUNA_APP_ID / ADZUNA_APP_KEY not set';
+            } else {
+                $agencyKeywords = array_values(array_filter((array) Setting::get('search.agency_keywords'), fn (mixed $k): bool => is_string($k) && trim($k) !== ''));
+                $jobCountries = array_values(array_filter((array) Setting::get('search.agency_job_countries'), fn (mixed $c): bool => is_string($c) && preg_match('/^[a-z]{2}$/', $c) === 1));
+
+                foreach ($jobCountries as $jobCountry) {
+                    foreach ($agencyKeywords as $keyword) {
+                        FetchAdzunaJobsJob::dispatch(trim($keyword), 1, $run->id, $jobCountry, LeadProduct::Agency->value);
+                        $dispatched[] = "adzuna:{$jobCountry}:{$keyword}";
+                    }
+                }
+            }
+        }
+
+        // Agency leads of any stack, worldwide, via web search (D113).
+        if ((int) Setting::get('source.agency.per_day') > 0) {
+            if (! filled(config('services.brave.key'))) {
+                $skipped[] = 'agency search: BRAVE_SEARCH_API_KEY not set';
+            } elseif ($this->agencies->remainingToday() === 0) {
+                $skipped[] = "agency search: today's cap (source.agency.per_day) already used";
+            } else {
+                $batch = $this->agencySearches->nextBatch();
+
+                foreach ($batch as $search) {
+                    FetchAgencySearchJob::dispatch($search['phrase'], $search['city'], $search['country'], $search['offset'], $run->id);
+                    $dispatched[] = "agency_search:{$search['country']}:{$search['city']}:{$search['phrase']}";
+                }
+
+                if ($batch === []) {
+                    $skipped[] = 'agency search: no markets enabled';
                 }
             }
         }

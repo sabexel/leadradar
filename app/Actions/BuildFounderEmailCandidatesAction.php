@@ -25,7 +25,11 @@ final class BuildFounderEmailCandidatesAction
 
     public function run(Company $company): Company
     {
-        $founders = $company->founders()->get();
+        // Guessed addresses only where the law allows emailing an address the company didn't publish (D115);
+        // elsewhere only crawled addresses are used and no candidates are generated.
+        $founders = in_array($company->country, (array) config('leadradar.email_guessing_countries', ['GB']), true)
+            ? $company->founders()->get()
+            : $company->founders()->whereRaw('1 = 0')->get();
         $preferred = $this->confirmedPattern($company);
         $created = 0;
         $skipped = [];

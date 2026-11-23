@@ -6,8 +6,10 @@ namespace App\Services\Scoring;
 
 use App\DTOs\Scoring\LeadScore;
 use App\Enums\CompanyType;
+use App\Enums\EmailKind;
 use App\Enums\EmailOrigin;
 use App\Enums\EmailVerificationStatus;
+use App\Enums\LeadProduct;
 use App\Enums\Registry;
 use App\Enums\RejectReason;
 use App\Enums\SignalSource;
@@ -15,6 +17,7 @@ use App\Models\Company;
 use App\Models\EmailAddress;
 use App\Models\Person;
 use App\Models\Signal;
+use App\Services\Crawler\TechStackDetector;
 use App\Services\Support\SuppressionList;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -37,6 +40,13 @@ final class LeadScoringService
     public function score(Company $company): LeadScore
     {
         $company->loadMissing(['signals', 'emailAddresses', 'people', 'contactEmail', 'careersEmail']);
+
+        if ($company->lead_product === LeadProduct::Agency) {
+            $breakdown = $this->agencyBreakdown($company);
+            $total = min(10.0, round(array_sum(array_column($breakdown, 'points')), 1));
+
+            return new LeadScore($total, $breakdown, $this->failedAgencyGate($company));
+        }
 
         $breakdown = [
             'laravel_evidence' => $this->laravelEvidence($company),
@@ -72,6 +82,91 @@ final class LeadScoringService
             $this->suppressions->isSuppressed($company) => RejectReason::Suppressed,
             default => null,
         };
+    }
+
+    /**
+     * Gates for agency leads of any stack (D116): no Laravel evidence and no registry needed. Registry facts are
+     * still applied when the lead was matched (UK); the email must be real and verified.
+     */
+    public function failedAgencyGate(Company $company): ?RejectReason
+    {
+        $company->loadMissing(['emailAddresses', 'people']);
+        $registered = $company->registration_number !== null && $company->registry !== null;
+
+        return match (true) {
+            $registered && $company->company_status !== null && $company->company_status !== 'active' => RejectReason::NotActive,
+            $registered && $company->accounts_category === 'dormant' => RejectReason::Dormant,
+            $company->registry_no_mailing => RejectReason::NoMailing,
+            $company->company_type === CompanyType::Recruiter => RejectReason::Recruiter,
+            $company->company_type === CompanyType::Offshore => RejectReason::Offshore,
+            $company->website === null => RejectReason::NoWebsite,
+            ! $this->isAgencyContactable($company) => RejectReason::NoValidEmail,
+            $this->suppressions->isSuppressed($company) => RejectReason::Suppressed,
+            default => null,
+        };
+    }
+
+    /**
+     * Any address MillionVerifier confirmed `ok`, or one the agency published itself that is `catch_all`.
+     */
+    public function isAgencyContactable(Company $company): bool
+    {
+        return $company->emailAddresses->contains(fn (EmailAddress $e): bool => $e->verification_status === EmailVerificationStatus::Ok
+            || ($e->verification_status === EmailVerificationStatus::CatchAll && $e->origin === EmailOrigin::Crawled));
+    }
+
+    /**
+     * 0–10 for agency leads (D116): what they build with, agency fit, who we can reach, and their inboxes.
+     *
+     * @return array<string, array{points: float, max: float, items: array<string, float>}>
+     */
+    private function agencyBreakdown(Company $company): array
+    {
+        $stack = $company->tech_stack ?? [];
+        $offered = count(TechStackDetector::offeredServed($stack));
+        $builtServed = array_filter(TechStackDetector::SERVED, fn (string $s): bool => in_array("built:{$s}", $stack, true)) !== [];
+        $founders = $this->founders($company);
+        $first = $founders->firstWhere('position', 1);
+        $firstEmail = $first === null ? null : $this->emailOf($company, $first);
+        $founderIds = $founders->pluck('id')->all();
+        $personOk = $company->emailAddresses->contains(fn (EmailAddress $e): bool => $e->kind === EmailKind::Person
+            && ! in_array($e->person_id, $founderIds, true)
+            && $e->verification_status === EmailVerificationStatus::Ok);
+
+        return [
+            'stack' => $this->line(3.0, [
+                // A job ad (Reed/Adzuna) for a stack we serve: they need hands for exactly that work (D117).
+                'hiring_for_served_stack' => $this->hiresForServedStack($company) ? 1.5 : 0.0,
+                'offers_served_stack' => match (true) {
+                    $offered >= 2 => 2.5,
+                    $offered === 1 => 1.5,
+                    default => 0.0,
+                },
+                'site_built_with_served_stack' => $builtServed ? 0.5 : 0.0,
+            ]),
+            'company_fit' => $this->line(2.0, [
+                'type' => match ($company->company_type) {
+                    CompanyType::Agency => 1.5,
+                    CompanyType::DirectClient => 0.75,
+                    default => 0.0,
+                },
+                'registered_or_established' => ($company->registration_number !== null && $company->company_status === 'active')
+                    || ($company->incorporated_on !== null && $company->incorporated_on->lessThanOrEqualTo(now()->subYears(2))) ? 0.5 : 0.0,
+            ]),
+            'decision_maker_reach' => $this->line(3.0, [
+                'founder_email' => match ($firstEmail?->verification_status) {
+                    EmailVerificationStatus::Ok => 2.0,
+                    EmailVerificationStatus::CatchAll => $firstEmail->origin === EmailOrigin::Crawled ? 1.0 : 0.0,
+                    default => 0.0,
+                },
+                'named_person_email' => $personOk ? 1.5 : 0.0,
+                'founder_linkedin' => $first?->linkedin_url !== null ? 0.5 : 0.0,
+            ]),
+            'company_inboxes' => $this->line(2.0, [
+                'contact_ok' => $company->contactEmail?->verification_status === EmailVerificationStatus::Ok ? 1.5 : 0.0,
+                'careers_found' => $company->careersEmail !== null ? 0.5 : 0.0,
+            ]),
+        ];
     }
 
     /**
@@ -185,6 +280,12 @@ final class LeadScoringService
             'contact_ok' => $company->contactEmail?->verification_status === EmailVerificationStatus::Ok ? 0.5 : 0.0,
             'careers_found' => $company->careersEmail !== null ? 0.5 : 0.0,
         ]);
+    }
+
+    private function hiresForServedStack(Company $company): bool
+    {
+        return $company->signals->contains(fn (Signal $s): bool => in_array($s->source, self::JOB_BOARDS, true)
+            && preg_match('/\b(?:wordpress|woo ?commerce|shopify|laravel|php|magento|webflow|drupal)\b/i', $s->title.' '.($s->description ?? '')) === 1);
     }
 
     /**

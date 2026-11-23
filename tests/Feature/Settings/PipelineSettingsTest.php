@@ -38,6 +38,15 @@ function validSettings(array $overrides = []): array
             'locations' => ['Leeds', ' York ', ''],
         ],
         'laravel_partners_enabled' => false,
+        'agency' => [
+            'per_day' => 70,
+            'queries_per_day' => 20,
+            'qualify_threshold' => 4.5,
+            'countries' => ['gb', 'US', 'nl'],
+            'jobs_per_day' => 30,
+            'job_keywords' => ['WordPress Developer', ''],
+            'job_countries' => ['GB', 'us'],
+        ],
         'website_places' => [
             'per_day' => 15,
             'min_reviews' => 40,
@@ -175,4 +184,19 @@ it('makes no call for a missing key or an unknown service', function () {
     $this->post(route('configuration.test'), ['service' => 'crawler'])->assertSessionHasErrors('service');
 
     Http::assertNothingSent();
+});
+
+it('saves the agency-lead settings cleaned', function () {
+    $this->put(route('configuration.update'), validSettings())->assertSessionHasNoErrors();
+
+    expect(Setting::get('source.agency.per_day'))->toBe(70)
+        ->and(Setting::get('source.agency.queries_per_day'))->toBe(20)
+        ->and(Setting::get('agency.qualify_threshold'))->toEqual(4.5)
+        ->and(Setting::get('source.agency.countries'))->toBe(['GB', 'US', 'NL'])
+        ->and(Setting::get('source.agency_jobs.per_day'))->toBe(30)
+        ->and(Setting::get('search.agency_keywords'))->toBe(['wordpress developer'])
+        ->and(Setting::get('search.agency_job_countries'))->toBe(['gb', 'us']);
+
+    $this->put(route('configuration.update'), validSettings(['agency' => ['countries' => ['XX']]]))
+        ->assertSessionHasErrors('agency.countries.0');
 });
