@@ -251,6 +251,7 @@ final class CompanyIndexQuery
             'country' => $company->country,
             'phone' => $company->phone,
             'reviewCount' => $company->review_count,
+            'techStack' => $company->tech_stack ?? [],
             'emailConsentRequired' => $company->email_consent_required,
             'registrationNumber' => $company->registration_number,
             'founders' => $company->founders->map(fn ($person): array => [

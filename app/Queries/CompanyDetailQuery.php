@@ -45,6 +45,7 @@ final class CompanyDetailQuery
                 'country' => $company->country,
                 'phone' => $company->phone,
                 'reviewCount' => $company->review_count,
+                'techStack' => $company->tech_stack ?? [],
                 'product' => $company->lead_product->value,
                 'emailConsentRequired' => $company->email_consent_required,
                 'registeredAddress' => $this->address($company->registered_address),

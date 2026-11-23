@@ -769,6 +769,7 @@ function outreachDraft(
         signalTitle: company.signal?.title ?? null,
         signalSource: company.signal?.source ?? null,
         reviewCount: company.reviewCount,
+        techStack: company.techStack,
     };
 }
 

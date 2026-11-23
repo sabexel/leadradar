@@ -299,6 +299,7 @@ function showDraft(
         signalTitle: signal?.title ?? null,
         signalSource: signal?.source ?? null,
         reviewCount: company.reviewCount,
+        techStack: company.techStack,
     };
 }
 

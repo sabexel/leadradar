@@ -32,6 +32,7 @@ export type CompanyRow = {
     country: string;
     phone: string | null;
     reviewCount: number | null;
+    techStack: string[];
     emailConsentRequired: boolean;
     registrationNumber: string | null;
     founders: {

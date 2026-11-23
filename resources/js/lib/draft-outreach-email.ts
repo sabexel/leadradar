@@ -9,6 +9,7 @@ export type OutreachDraftInput = {
     signalTitle: string | null;
     signalSource: string | null;
     reviewCount: number | null;
+    techStack?: string[];
 };
 
 export type OutreachDraft = {
@@ -43,6 +44,37 @@ export function draftOutreachEmail(input: OutreachDraftInput): OutreachDraft {
                 'I help UK businesses get a clear, fast site that matches how they already win work offline — happy to share a couple of simple options if useful.',
                 '',
                 'If now isn’t the right time, no worries — just say so and I won’t follow up.',
+                '',
+                'Best regards,',
+                'Webwayout',
+                'https://webwayout.co.uk',
+            ].join('\n'),
+            consentWarning: input.emailConsentRequired,
+        };
+    }
+
+    if (input.product === 'agency') {
+        const stacks = offeredStacks(input.techStack ?? []);
+        const stackText = stacks.length > 0 ? stacks.join(' / ') : 'web';
+        const opening =
+            input.signalTitle &&
+            ['reed', 'adzuna'].includes(input.signalSource ?? '')
+                ? `I noticed ${company} is hiring for “${input.signalTitle}”.`
+                : input.website
+                  ? `I came across ${company} (${input.website.replace(/^https?:\/\//, '')}) while looking at ${stackText} agencies.`
+                  : `I came across ${company} while looking at ${stackText} agencies.`;
+
+        return {
+            to: input.recipientEmail,
+            subject: `Extra ${stackText} hands for ${company}`,
+            body: [
+                greeting,
+                '',
+                opening,
+                '',
+                `Webwayout is a small UK dev team that takes white-label ${stackText} work from agencies when their own team is full — builds, fixes, plugins/apps and ongoing support, delivered under your brand.`,
+                '',
+                'If that could help with overflow or a backlog, I can send a short one-pager and a couple of examples. If it’s not relevant, just say so and I won’t follow up.',
                 '',
                 'Best regards,',
                 'Webwayout',
@@ -95,4 +127,27 @@ function firstName(full: string | null): string | null {
     const part = full.trim().split(/\s+/)[0] ?? '';
 
     return part === '' ? null : part;
+}
+
+const STACK_LABELS: Record<string, string> = {
+    wordpress: 'WordPress',
+    woocommerce: 'WooCommerce',
+    shopify: 'Shopify',
+    laravel: 'Laravel',
+    php: 'PHP',
+    magento: 'Magento',
+    webflow: 'Webflow',
+    bigcommerce: 'BigCommerce',
+    drupal: 'Drupal',
+};
+
+/**
+ * "offers:shopify" entries from the crawl (D114), as labels, at most three.
+ */
+function offeredStacks(stack: string[]): string[] {
+    return stack
+        .filter((s) => s.startsWith('offers:'))
+        .map((s) => STACK_LABELS[s.slice('offers:'.length)])
+        .filter((label): label is string => label !== undefined)
+        .slice(0, 3);
 }

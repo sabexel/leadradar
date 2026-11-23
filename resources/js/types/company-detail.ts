@@ -36,6 +36,7 @@ export type CompanyDetailProps = {
         country: string;
         phone: string | null;
         reviewCount: number | null;
+        techStack: string[];
         product: string;
         emailConsentRequired: boolean;
         registeredAddress: string | null;
