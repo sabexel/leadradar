@@ -8,6 +8,7 @@ use App\Actions\AdvanceLeadPipelineAction;
 use App\Actions\ApplyCrawlResultAction;
 use App\DTOs\Crawl\CrawlResult;
 use App\Enums\PipelineStep;
+use App\Enums\RejectReason;
 use App\Exceptions\ExternalServiceException;
 use App\Jobs\Concerns\FailsCompanyStep;
 use App\Jobs\Concerns\InteractsWithServiceLimits;
@@ -20,6 +21,7 @@ use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
+use Illuminate\Support\Str;
 
 /**
  * crawl: ONE request per run — robots.txt the first time a domain is seen, otherwise one page.
@@ -89,8 +91,17 @@ final class CrawlCompanyWebsiteJob implements ShouldBeUnique, ShouldQueue
         try {
             [$called, $result] = $this->withinServiceLimits(fn (): CrawlResult => $crawler->fetchPage($company, $this->url));
         } catch (ExternalServiceException $e) {
-            // An unreachable inner page is data; an unreachable home page means retry, then error.
+            // An unreachable inner page is data. A home page that can never load (no DNS, broken certificate,
+            // redirect loop) means the site is dead: reject at once instead of retrying into "error" (D123).
+            // Anything else (a timeout) is retried, then error.
             if ($this->url === $planner->homeUrl($company)) {
+                if (self::isPermanentFailure($e->getMessage())) {
+                    $company->update(['pipeline_step' => PipelineStep::Done]);
+                    $company->reject(RejectReason::NoWebsite, 'Website unreachable: '.Str::limit($e->getMessage(), 160), ['url' => $this->url]);
+
+                    return;
+                }
+
                 throw $e;
             }
 
@@ -103,5 +114,14 @@ final class CrawlCompanyWebsiteJob implements ShouldBeUnique, ShouldQueue
 
         $apply->apply($company, $result);
         $advance->run($company->refresh());
+    }
+
+    /**
+     * Connection failures that will not go away on a retry (D123): host not found (cURL 6), certificate or TLS
+     * failures (35, 51, 58, 60), a redirect loop. A timeout (28) or refused connection (7) may be temporary.
+     */
+    public static function isPermanentFailure(string $message): bool
+    {
+        return preg_match('/cURL error (?:6|35|51|58|60):|more than \d+ redirects|SSL certificate problem/i', $message) === 1;
     }
 }

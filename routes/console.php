@@ -18,8 +18,16 @@ Schedule::command('queue:work --queue=registry,verify,web,sources --stop-when-em
     ->withoutOverlapping(2)
     ->runInBackground();
 
+// Second short-lived worker that takes searches and crawls first, so new leads don't wait behind
+// registry and verification work (D125). Each job is one call, so two workers never double-spend.
+Schedule::command('queue:work --queue=sources,web --stop-when-empty --max-time=50 --tries=3')
+    ->everyMinute()
+    ->withoutOverlapping(2)
+    ->runInBackground();
+
 Schedule::command('leadradar:discover')->dailyAt('06:10')->timezone('Europe/London');
 Schedule::command('leadradar:close-runs')->everyFifteenMinutes();
+Schedule::command('leadradar:cleanup')->hourly();
 Schedule::command('leadradar:report-failed-jobs')->dailyAt('07:00')->timezone('Europe/London');
 Schedule::command('queue:prune-failed --hours=168')->daily();
 Schedule::command('model:prune')->daily(); // companies (12 months idle), pipeline_events, api_usages

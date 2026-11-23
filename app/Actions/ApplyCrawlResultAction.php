@@ -235,7 +235,7 @@ final class ApplyCrawlResultAction
      *
      * @param  Collection<int, CrawledPage>  $pages
      */
-    private function applyBrandName(Company $company, Collection $pages): void
+    public function applyBrandName(Company $company, Collection $pages): void
     {
         if (! $company->signals()->where('source', SignalSource::AgencySearch)->exists()) {
             return;
