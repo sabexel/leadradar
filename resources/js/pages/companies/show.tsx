@@ -364,11 +364,7 @@ function FounderCard({
                             <EmailLine
                                 email={founder.email}
                                 companyId={companyId}
-                                draft={showDraft(
-                                    company,
-                                    signal,
-                                    founder.name,
-                                )}
+                                draft={showDraft(company, signal, founder.name)}
                             />
                         </div>
 

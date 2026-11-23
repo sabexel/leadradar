@@ -701,9 +701,7 @@ function CompanyTableRow({
                             />
                             <EmailActions
                                 email={company.contactEmail.email}
-                                verified={
-                                    company.contactEmail.status === 'ok'
-                                }
+                                verified={company.contactEmail.status === 'ok'}
                                 draft={outreachDraft(company, null)}
                             />
                         </div>

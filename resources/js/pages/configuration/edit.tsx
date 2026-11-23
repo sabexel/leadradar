@@ -354,8 +354,8 @@ export default function ConfigurationEdit({
                                 on Google Places with no website and at least
                                 this many reviews (official API — not Maps
                                 scraping). Includes sole traders; cold email
-                                needs consent (PECR) — phone is preferred. 0
-                                per day turns this source off.
+                                needs consent (PECR) — phone is preferred. 0 per
+                                day turns this source off.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="grid gap-4 sm:grid-cols-2">
