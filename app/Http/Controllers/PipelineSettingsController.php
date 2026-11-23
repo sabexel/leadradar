@@ -52,7 +52,14 @@ final class PipelineSettingsController extends Controller
                     'locations' => array_values((array) Setting::get('source.ch_sic.locations')),
                 ],
                 'laravel_partners_enabled' => (bool) Setting::get('source.laravel_partners.enabled'),
+                'website_places' => [
+                    'per_day' => (int) Setting::get('source.places.per_day'),
+                    'min_reviews' => (int) Setting::get('source.places.min_reviews'),
+                    'cities' => array_values((array) Setting::get('source.places.cities')),
+                    'types' => array_values((array) Setting::get('source.places.types')),
+                ],
             ],
+            'placeTypes' => $this->placeTypes(),
             'services' => array_map(fn (string $service): array => [
                 'value' => $service,
                 'label' => ExternalService::from($service)->label(),
@@ -80,6 +87,10 @@ final class PipelineSettingsController extends Controller
         Setting::put('source.ch_sic.sic_codes', array_values($data['registry_search']['sic_codes']));
         Setting::put('source.ch_sic.locations', array_values($data['registry_search']['locations']));
         Setting::put('source.laravel_partners.enabled', (bool) $data['laravel_partners_enabled']);
+        Setting::put('source.places.per_day', (int) $data['website_places']['per_day']);
+        Setting::put('source.places.min_reviews', (int) $data['website_places']['min_reviews']);
+        Setting::put('source.places.cities', array_values($data['website_places']['cities']));
+        Setting::put('source.places.types', array_values($data['website_places']['types']));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Settings saved. Run php artisan leadradar:rescore if you changed the threshold.']);
 
@@ -97,5 +108,21 @@ final class PipelineSettingsController extends Controller
         Inertia::flash('toast', ['type' => $result['ok'] ? 'success' : 'error', 'message' => $result['message']]);
 
         return back();
+    }
+
+    /**
+     * @return list<array{value: string, label: string}>
+     */
+    private function placeTypes(): array
+    {
+        $types = [];
+
+        foreach ((array) config('leadradar.place_types', []) as $value => $label) {
+            if (is_string($value) && is_string($label)) {
+                $types[] = ['value' => $value, 'label' => $label];
+            }
+        }
+
+        return $types;
     }
 }

@@ -34,9 +34,14 @@ export type CompanyDetailProps = {
         domain: string | null;
         location: string | null;
         country: string;
+        phone: string | null;
+        reviewCount: number | null;
+        product: string;
+        emailConsentRequired: boolean;
         registeredAddress: string | null;
         registrationNumber: string | null;
-        companiesHouseUrl: string | null;
+        registryLabel: string | null;
+        registryUrl: string | null;
         companyStatus: string | null;
         companyKind: string | null;
         incorporatedOn: string | null;

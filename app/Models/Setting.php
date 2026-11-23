@@ -32,8 +32,11 @@ class Setting extends Model
         'cap.brave.per_day' => 150,
         'cap.adzuna.per_day' => 200,
         'cap.companies_house.per_5min' => 500,
+        'cap.kvk.per_day' => 50, // paid basisprofielen (€0.02 each); searches are free
+        'cap.opencorporates.per_day' => 15, // calls; the Essentials plan allows 500 a month
         'cap.crawler.pages_per_company' => 6,
-        'search.keywords' => ['laravel'],
+        // Job-board keywords (D110). Keep Laravel-specific phrases; bare "inertia" / "filament" match unrelated trades.
+        'search.keywords' => ['laravel', 'php laravel', 'laravel developer', 'livewire'],
         'search.countries' => ['GB'],
         'signal.max_age_days' => 30,
         // Companies House advanced search source (D106). New companies per London day; 0 turns the source off.
@@ -44,6 +47,12 @@ class Setting extends Model
         // The position per SIC + location is kept in `source.ch_sic.cursor.{sic}|{location}` rows (FetchCompaniesHouseSicJob).
         // laravel.com/partners (P4.1, D108): one page request per discovery run.
         'source.laravel_partners.enabled' => true,
+        // Website leads via Google Places (D111). 0 per_day turns the source off.
+        'cap.google_places.per_day' => 100,
+        'source.places.per_day' => 25,
+        'source.places.min_reviews' => 30,
+        'source.places.cities' => ['Manchester', 'Leeds', 'Birmingham', 'Bristol', 'London'],
+        'source.places.types' => ['plumber', 'electrician', 'hair_salon', 'restaurant', 'dentist'],
     ];
 
     /**

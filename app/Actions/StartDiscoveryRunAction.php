@@ -8,6 +8,7 @@ use App\Enums\RunTrigger;
 use App\Enums\ScrapeRunStatus;
 use App\Jobs\Sources\FetchAdzunaJobsJob;
 use App\Jobs\Sources\FetchCompaniesHouseSicJob;
+use App\Jobs\Sources\FetchGooglePlacesJob;
 use App\Jobs\Sources\FetchLaravelPartnersJob;
 use App\Jobs\Sources\FetchReedJobsJob;
 use App\Models\ScrapeRun;
@@ -24,6 +25,7 @@ final class StartDiscoveryRunAction
     public function __construct(
         private readonly DailyTarget $target,
         private readonly IngestRegistryCompanyAction $registry,
+        private readonly IngestWebsitePlaceAction $places,
     ) {}
 
     /**
@@ -117,6 +119,46 @@ final class StartDiscoveryRunAction
         if (in_array('GB', $countries, true) && (bool) Setting::get('source.laravel_partners.enabled')) {
             FetchLaravelPartnersJob::dispatch($run->id);
             $dispatched[] = 'laravel_partners';
+        }
+
+        // Website leads — Google Places, no website, min reviews (D111). Separate from Laravel product.
+        if (in_array('GB', $countries, true) && (int) Setting::get('source.places.per_day') > 0) {
+            if (! filled(config('services.google_places.key'))) {
+                $skipped[] = 'google places: GOOGLE_PLACES_API_KEY not set';
+            } else {
+                $allowedTypes = array_keys(config('leadradar.place_types', []));
+                $types = array_values(array_filter(
+                    (array) Setting::get('source.places.types'),
+                    fn (mixed $t): bool => is_string($t) && in_array($t, $allowedTypes, true),
+                ));
+                $cities = array_values(array_filter(array_map(
+                    fn (mixed $c): string => is_string($c) ? trim($c) : '',
+                    (array) Setting::get('source.places.cities'),
+                )));
+                $pairs = [];
+
+                foreach ($cities as $city) {
+                    foreach ($types as $type) {
+                        $pairs[] = [$city, $type];
+                    }
+                }
+
+                $remaining = $this->places->remainingToday();
+
+                if ($pairs === []) {
+                    $skipped[] = 'google places: no cities or business types set';
+                } elseif ($remaining === 0) {
+                    $skipped[] = "google places: today's cap (source.places.per_day) already used";
+                } else {
+                    $share = (int) ceil($remaining / count($pairs));
+                    $turn = CarbonImmutable::now((string) config('leadradar.timezone', 'Europe/London'))->dayOfYear % count($pairs);
+
+                    foreach ([...array_slice($pairs, $turn), ...array_slice($pairs, 0, $turn)] as [$city, $type]) {
+                        FetchGooglePlacesJob::dispatch($city, $type, $share, 1, null, $run->id);
+                        $dispatched[] = "google_places:{$type}:{$city}";
+                    }
+                }
+            }
         }
 
         if ($dispatched === []) {

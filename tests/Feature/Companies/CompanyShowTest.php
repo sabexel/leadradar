@@ -80,7 +80,8 @@ it('shows the company, founders, candidates, score breakdown, evidence and timel
             ->component('companies/show')
             ->where('company.name', 'Example Digital Ltd')
             ->where('company.status', 'qualified')
-            ->where('company.companiesHouseUrl', 'https://find-and-update.company-information.service.gov.uk/company/01234567')
+            ->where('company.registryUrl', 'https://find-and-update.company-information.service.gov.uk/company/01234567')
+            ->where('company.registryLabel', 'Companies House')
             ->where('company.contactEmail.email', 'hello@example-digital.test')
             ->where('company.contactEmail.status', 'ok')
             ->where('company.canRetry', false)
@@ -107,7 +108,7 @@ it('shows a lead that has not been scored yet', function () {
     $this->get(route('companies.show', $company))->assertInertia(fn (Assert $page) => $page
         ->where('scoreBreakdown', null)
         ->where('founders', [])
-        ->where('company.companiesHouseUrl', null));
+        ->where('company.registryUrl', null));
 });
 
 it('saves notes and clears them when emptied', function () {

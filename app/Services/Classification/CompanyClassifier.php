@@ -24,16 +24,19 @@ use Illuminate\Support\Str;
 final class CompanyClassifier
 {
     /**
-     * Software, IT consultancy, web, advertising and design activities.
+     * Software, IT consultancy, web, advertising and design activities. UK SIC 2007 and Dutch SBI 2008 codes share
+     * these first four digits (62011/62012 and 6201 are both "software"), so one prefix list covers both (D110).
      */
-    public const AGENCY_SIC_CODES = ['62011', '62012', '62020', '62090', '63110', '73110', '74100'];
+    private const AGENCY_CODE_PREFIXES = ['6201', '6202', '6209', '6311', '7311', '7410'];
 
     private const AGENCY_LANGUAGE = [
         'agency', 'studio', 'our clients', 'for clients', 'client projects?', 'client work', 'client sites?',
         'our work', 'case stud(?:y|ies)', 'portfolio', 'white[- ]label',
+        'onze klanten', 'voor klanten', 'opdrachtgevers', 'ons werk', 'klantprojecten',
     ];
 
-    private const EXPLICIT_AGENCY = '(?:digital|web|creative|development|software|design|marketing|branding|ecommerce|e-commerce) (?:agency|studio)';
+    private const EXPLICIT_AGENCY = '(?:(?:digital|web|creative|development|software|design|marketing|branding|ecommerce|e-commerce) (?:agency|studio)'
+        .'|(?:web|internet|software|ontwikkel|reclame|marketing|design|online|digitaal|digital|creatief|e-commerce) ?bureau)';
 
     public function __construct(
         private readonly RecruiterDetector $recruiters,
@@ -59,7 +62,7 @@ final class CompanyClassifier
         $text = Str::lower($input->allText());
         $agencyLanguage = $this->firstMatch($text, self::AGENCY_LANGUAGE);
         $explicitAgency = preg_match('/\b'.self::EXPLICIT_AGENCY.'\b/u', $text, $m) === 1 ? $m[0] : null;
-        $agencySic = array_values(array_intersect($input->sicCodes, self::AGENCY_SIC_CODES));
+        $agencySic = array_values(array_filter($input->sicCodes, fn (string $code): bool => in_array(substr($code, 0, 4), self::AGENCY_CODE_PREFIXES, true)));
 
         if ($explicitAgency !== null) {
             return new Classification(CompanyType::Agency, $offshoreSignals, ["Says \"{$explicitAgency}\""]);

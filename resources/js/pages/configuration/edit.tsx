@@ -38,10 +38,17 @@ type Settings = {
         locations: string[];
     };
     laravel_partners_enabled: boolean;
+    website_places: {
+        per_day: number;
+        min_reviews: number;
+        cities: string[];
+        types: string[];
+    };
 };
 
 type ConfigurationProps = {
     settings: Settings;
+    placeTypes: { value: string; label: string }[];
     services: { value: string; label: string; configured: boolean }[];
 };
 
@@ -67,6 +74,7 @@ const CAP_FIELDS: { key: keyof Caps; label: string; hint: string }[] = [
 
 export default function ConfigurationEdit({
     settings,
+    placeTypes,
     services,
 }: ConfigurationProps) {
     const form = useForm({
@@ -83,9 +91,21 @@ export default function ConfigurationEdit({
         registry_sic_codes: settings.registry_search.sic_codes.join(', '),
         registry_locations: settings.registry_search.locations.join('\n'),
         laravel_partners_enabled: settings.laravel_partners_enabled,
+        places_per_day: String(settings.website_places.per_day),
+        places_min_reviews: String(settings.website_places.min_reviews),
+        places_cities: settings.website_places.cities.join('\n'),
+        places_types: settings.website_places.types,
     });
 
     const errors = form.errors as Record<string, string | undefined>;
+
+    const togglePlaceType = (value: string) =>
+        form.setData(
+            'places_types',
+            form.data.places_types.includes(value)
+                ? form.data.places_types.filter((t) => t !== value)
+                : [...form.data.places_types, value],
+        );
 
     const submit = (event: React.FormEvent) => {
         event.preventDefault();
@@ -95,6 +115,10 @@ export default function ConfigurationEdit({
                 registry_min_age_years,
                 registry_sic_codes,
                 registry_locations,
+                places_per_day,
+                places_min_reviews,
+                places_cities,
+                places_types,
                 ...data
             }) => ({
                 ...data,
@@ -105,6 +129,12 @@ export default function ConfigurationEdit({
                     min_age_years: registry_min_age_years,
                     sic_codes: registry_sic_codes.split(/[\s,]+/),
                     locations: registry_locations.split('\n'),
+                },
+                website_places: {
+                    per_day: places_per_day,
+                    min_reviews: places_min_reviews,
+                    cities: places_cities.split('\n'),
+                    types: places_types,
                 },
             }),
         );
@@ -309,6 +339,100 @@ export default function ConfigurationEdit({
                                         firstNested(
                                             errors,
                                             'registry_search.locations.',
+                                        )
+                                    }
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Website leads (Google Places)</CardTitle>
+                            <CardDescription>
+                                Separate from Laravel leads. Finds UK businesses
+                                on Google Places with no website and at least
+                                this many reviews (official API — not Maps
+                                scraping). Includes sole traders; cold email
+                                needs consent (PECR) — phone is preferred. 0
+                                per day turns this source off.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="grid gap-4 sm:grid-cols-2">
+                            <NumberField
+                                id="website_places.per_day"
+                                label="New website leads per day"
+                                value={form.data.places_per_day}
+                                onChange={(v) =>
+                                    form.setData('places_per_day', v)
+                                }
+                                error={errors['website_places.per_day']}
+                                min={0}
+                                max={200}
+                            />
+                            <NumberField
+                                id="website_places.min_reviews"
+                                label="Minimum Google reviews"
+                                value={form.data.places_min_reviews}
+                                onChange={(v) =>
+                                    form.setData('places_min_reviews', v)
+                                }
+                                error={errors['website_places.min_reviews']}
+                                min={1}
+                                max={500}
+                            />
+                            <div className="grid gap-2 sm:col-span-2">
+                                <Label htmlFor="places_cities">
+                                    Cities (one per line)
+                                </Label>
+                                <textarea
+                                    id="places_cities"
+                                    rows={4}
+                                    value={form.data.places_cities}
+                                    onChange={(e) =>
+                                        form.setData(
+                                            'places_cities',
+                                            e.target.value,
+                                        )
+                                    }
+                                    className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                />
+                                <InputError
+                                    message={
+                                        errors['website_places.cities'] ??
+                                        firstNested(
+                                            errors,
+                                            'website_places.cities.',
+                                        )
+                                    }
+                                />
+                            </div>
+                            <div className="grid gap-2 sm:col-span-2">
+                                <Label>Business types</Label>
+                                <div className="flex flex-wrap gap-x-4 gap-y-2">
+                                    {placeTypes.map((type) => (
+                                        <label
+                                            key={type.value}
+                                            className="flex items-center gap-2 text-sm"
+                                        >
+                                            <Checkbox
+                                                checked={form.data.places_types.includes(
+                                                    type.value,
+                                                )}
+                                                onCheckedChange={() =>
+                                                    togglePlaceType(type.value)
+                                                }
+                                            />
+                                            {type.label}
+                                        </label>
+                                    ))}
+                                </div>
+                                <InputError
+                                    message={
+                                        errors['website_places.types'] ??
+                                        firstNested(
+                                            errors,
+                                            'website_places.types.',
                                         )
                                     }
                                 />

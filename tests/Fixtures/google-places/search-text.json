@@ -1,0 +1,37 @@
+{
+    "places": [
+        {
+            "id": "places/ChIJExampleNoSite",
+            "types": ["plumber", "point_of_interest", "establishment"],
+            "nationalPhoneNumber": "0161 000 0001",
+            "formattedAddress": "1 Example Street, Manchester M1 1AA, UK",
+            "rating": 4.6,
+            "googleMapsUri": "https://maps.google.com/?cid=1",
+            "userRatingCount": 48,
+            "displayName": {
+                "text": "Example Plumbing Co",
+                "languageCode": "en"
+            }
+        },
+        {
+            "id": "places/ChIJExampleWithSite",
+            "types": ["plumber"],
+            "websiteUri": "https://example-plumbing.test",
+            "userRatingCount": 100,
+            "displayName": {
+                "text": "Has A Website Ltd",
+                "languageCode": "en"
+            }
+        },
+        {
+            "id": "places/ChIJExampleFewReviews",
+            "types": ["plumber"],
+            "userRatingCount": 5,
+            "displayName": {
+                "text": "Few Reviews Plumbing",
+                "languageCode": "en"
+            }
+        }
+    ],
+    "nextPageToken": "NEXT_PAGE_TOKEN"
+}

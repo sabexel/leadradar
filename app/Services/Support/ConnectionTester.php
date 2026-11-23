@@ -9,6 +9,9 @@ use App\Models\Setting;
 use App\Services\CompaniesHouse\CompaniesHouseService;
 use App\Services\JobBoards\AdzunaService;
 use App\Services\JobBoards\ReedService;
+use App\Services\Places\GooglePlacesService;
+use App\Services\Registries\KvkService;
+use App\Services\Registries\OpenCorporatesService;
 use App\Services\Search\BraveSearchService;
 use App\Services\Verification\MillionVerifierService;
 use Throwable;
@@ -25,18 +28,24 @@ final class ConnectionTester
      */
     public const KEYS = [
         'companies_house' => ['services.companies_house.key'],
+        'kvk' => ['services.kvk.key'],
+        'opencorporates' => ['services.opencorporates.token'],
         'reed' => ['services.reed.key'],
         'adzuna' => ['services.adzuna.app_id', 'services.adzuna.app_key'],
         'millionverifier' => ['services.millionverifier.key'],
         'brave' => ['services.brave.key'],
+        'google_places' => ['services.google_places.key'],
     ];
 
     public function __construct(
         private readonly CompaniesHouseService $companiesHouse,
+        private readonly KvkService $kvk,
+        private readonly OpenCorporatesService $openCorporates,
         private readonly ReedService $reed,
         private readonly AdzunaService $adzuna,
         private readonly MillionVerifierService $millionVerifier,
         private readonly BraveSearchService $brave,
+        private readonly GooglePlacesService $googlePlaces,
     ) {}
 
     public function isConfigured(ExternalService $service): bool
@@ -62,10 +71,14 @@ final class ConnectionTester
         try {
             $detail = match ($service) {
                 ExternalService::CompaniesHouse => $this->companiesHouse->searchCompanies('Companies House', 1)->count().' result(s) for a sample search',
+                // The KVK search is free; one OpenCorporates search uses one call of the plan's budget.
+                ExternalService::Kvk => $this->kvk->searchCompanies('Kamer van Koophandel', 1)->count().' result(s) for a sample search',
+                ExternalService::OpenCorporates => $this->openCorporates->searchCompanies('Laravel', 1)->count().' result(s) for a sample search',
                 ExternalService::Reed => ($this->reed->search('laravel', 0, 1)->totalResults ?? 0).' Laravel jobs listed',
                 ExternalService::Adzuna => ($this->adzuna->search('laravel', 1, 30, 1)->totalResults ?? 0).' Laravel jobs listed',
                 ExternalService::MillionVerifier => $this->credits(),
                 ExternalService::Brave => ($this->brave->findCompanyWebsite('Companies House') === null ? 'no' : 'a').' website found for a sample search',
+                ExternalService::GooglePlaces => $this->googlePlaces->searchText('Manchester', 'plumber')->places->count().' place(s) for a sample search',
                 ExternalService::Crawler => '',
             };
 

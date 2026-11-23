@@ -41,14 +41,39 @@ abstract class ExternalApiService
      */
     protected function get(string $path, array $query, string $endpoint, float $cost = 1.0, bool $allowNotFound = false, bool $allowErrors = false): Response
     {
+        return $this->send('get', $path, $query, $endpoint, $cost, $allowNotFound, $allowErrors);
+    }
+
+    /**
+     * @param  array<string, mixed>  $body
+     *
+     * @throws RateLimitedException
+     * @throws DailyCapReachedException
+     * @throws ExternalServiceException
+     */
+    protected function post(string $path, array $body, string $endpoint, float $cost = 1.0): Response
+    {
+        return $this->send('post', $path, $body, $endpoint, $cost);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload  query string for GET, JSON body for POST
+     *
+     * @throws RateLimitedException
+     * @throws DailyCapReachedException
+     * @throws ExternalServiceException
+     */
+    private function send(string $method, string $path, array $payload, string $endpoint, float $cost = 1.0, bool $allowNotFound = false, bool $allowErrors = false): Response
+    {
         $this->limiter->ensureAvailable($this->service(), $cost);
 
         $started = hrtime(true);
 
         try {
-            $response = $this->client()
-                ->retry(2, 500, fn (Throwable $e): bool => $this->shouldRetry($e), throw: false)
-                ->get($path, $query);
+            $pending = $this->client()
+                ->retry(2, 500, fn (Throwable $e): bool => $this->shouldRetry($e), throw: false);
+
+            $response = $method === 'post' ? $pending->post($path, $payload) : $pending->get($path, $payload);
         } catch (ConnectionException $e) {
             $this->limiter->record($this->service(), $endpoint, null, $this->elapsedMs($started), $cost);
 
@@ -113,7 +138,7 @@ abstract class ExternalApiService
      */
     private function redact(string $text): string
     {
-        return (string) preg_replace('/([?&](?:app_id|app_key|api|api_key|key|token)=)[^&\s"\']+/i', '$1[redacted]', $text);
+        return (string) preg_replace('/([?&](?:app_id|app_key|api|api_key|api_token|key|token)=)[^&\s"\']+/i', '$1[redacted]', $text);
     }
 
     private function retryAfter(Response $response): int

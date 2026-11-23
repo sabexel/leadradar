@@ -15,7 +15,7 @@ it('seeds every default setting', function () {
     expect(Setting::count())->toBe(count(Setting::DEFAULTS))
         ->and(Setting::get('daily_qualified_target'))->toBe(50)
         ->and(Setting::get('qualify_threshold'))->toEqual(6.0)
-        ->and(Setting::get('search.keywords'))->toBe(['laravel']);
+        ->and(Setting::get('search.keywords'))->toBe(['laravel', 'php laravel', 'laravel developer', 'livewire']);
 });
 
 it('does not overwrite settings the owner changed when reseeding', function () {

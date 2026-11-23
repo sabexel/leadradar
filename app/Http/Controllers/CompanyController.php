@@ -9,6 +9,7 @@ use App\Actions\RetryPipelineStepAction;
 use App\Actions\SuppressCompanyAction;
 use App\Actions\UpdateOutreachStatusAction;
 use App\Enums\CompanyType;
+use App\Enums\LeadProduct;
 use App\Enums\LeadStatus;
 use App\Enums\OutreachStatus;
 use App\Enums\PipelineStep;
@@ -53,6 +54,7 @@ final class CompanyController extends Controller
                 'status' => $this->options(LeadStatus::cases()),
                 'outreach' => $this->options(OutreachStatus::cases()),
                 'type' => $this->options(CompanyType::cases()),
+                'product' => $this->options(LeadProduct::cases()),
                 'source' => array_map(fn (SignalSource $s): array => ['value' => $s->value, 'label' => $s->label()], SignalSource::cases()),
                 'rejectReason' => array_map(fn (RejectReason $r): array => ['value' => $r->value, 'label' => $r->label()], RejectReason::cases()),
                 'step' => $this->options(array_slice(PipelineStep::cases(), 0, -1)), // every step but `done`

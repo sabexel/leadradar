@@ -508,3 +508,33 @@
   extended; invented fixture `laravel-partners/partners.html`. 603 passing; Pint, Larastan, tsc, build clean.
 - Decisions: D108, D109.
 - Notes / follow-ups: P4.2 needs owner decisions (countries, paid registry APIs) before any code.
+
+## 2026-11-21 — CFG More job-board search keywords
+- Done: `search.keywords` default and the local Setting set to `laravel`, `php laravel`, `laravel developer`,
+  `livewire` (D110). Live Adzuna check: bare `inertia` / `filament` were junk (mechanical design, GRP), so not
+  added. Reed remains 0 direct-employer hits for every phrase.
+- Tests: defaults asserted in `PipelineSettingsTest` and `SettingsAndRetentionTest`. Related settings tests pass.
+- Decisions: D110.
+- Notes / follow-ups: next discovery run will search all four keywords on Reed + Adzuna (more Adzuna page calls;
+  company dedupe still applies). Editable on Settings → Search.
+
+## 2026-11-21 — SRC Website leads via Google Places API (D111)
+- Done: `LeadProduct` (laravel|website); migration for `lead_product`, `google_place_id`, `review_count`, `phone`,
+  `email_consent_required`; `GooglePlacesService` (Places API New Text Search + field mask); `FetchGooglePlacesJob` +
+  `IngestWebsitePlaceAction`; discovery wiring; Settings card (cities, business types, min reviews, per day);
+  Companies filter by Product; detail shows phone/reviews/consent. `ExternalApiService::post()` added. Key:
+  `GOOGLE_PLACES_API_KEY`. Defaults: 25/day, 30 reviews, 5 UK cities, plumber/electrician/hair_salon/restaurant/dentist.
+- Tests: `FetchGooglePlacesJobTest` (3) + settings save/show for website places; fixture
+  `google-places/search-text.json`. Related settings/places tests pass; build ok. Full suite not re-run (P4.2 WIP still
+  present alongside).
+- Decisions: D111.
+- Notes / follow-ups: owner to add Places API key (billing on Google Cloud). PECR: sole traders flagged
+  email_consent_required — use phone. Not Maps scraping.
+
+## 2026-11-21 — P4.4 Outreach email draft (copy + generate popup)
+- Done: `EmailActions` next to Verified badges on companies index + detail; `draftOutreachEmail` templates for
+  Laravel (agency vs product, job-ad/Partners opening) and website leads; dialog with editable subject/body,
+  copy buttons, mailto, PECR consent warning when `emailConsentRequired`.
+- Tests: tsc + Vite build clean (UI-only).
+- Decisions: D112; P4.4 ticked.
+- Notes / follow-ups: hard-refresh /companies to see icons. Templates can be tuned later.

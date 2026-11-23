@@ -52,6 +52,22 @@ return [
         'per_minute' => 100,
     ],
 
+    // Netherlands registry (docs/04). Zoeken is free; each basisprofiel costs €0.02.
+    'kvk' => [
+        'key' => env('KVK_API_KEY'),
+        'base_url' => env('KVK_BASE_URL', 'https://api.kvk.nl/api'),
+        'timeout' => 15,
+        'per_minute' => 60,
+    ],
+
+    // US registries via OpenCorporates (docs/04). Paid plans have small monthly call budgets.
+    'opencorporates' => [
+        'token' => env('OPENCORPORATES_API_TOKEN'),
+        'base_url' => env('OPENCORPORATES_BASE_URL', 'https://api.opencorporates.com/v0.4'),
+        'timeout' => 20,
+        'per_minute' => 20,
+    ],
+
     'reed' => [
         'key' => env('REED_API_KEY'),
         'base_url' => env('REED_BASE_URL', 'https://www.reed.co.uk/api/1.0'),
@@ -94,7 +110,8 @@ return [
             'crunchbase.com', 'zoominfo.com', 'rocketreach.co', 'apollo.io', 'lusha.com', 'cbinsights.com',
             'pitchbook.com', 'owler.com', 'craft.co', 'northdata.com', 'globaldatabase.com', 'thegazette.co.uk',
             'gbrbusiness.com', 'opengovuk.com', 'checkall.co.uk', 'ukbizdb.co.uk', 'reportingaccounts.com',
-            'huntukvisasponsors.com', 'arbolus.com', 'freehire.me',
+            'huntukvisasponsors.com', 'arbolus.com', 'freehire.me', 'kvk.nl', 'openkvk.nl', 'drimble.nl',
+            'oozo.nl', 'companyinfo.nl', 'bizapedia.com', 'bbb.org', 'manta.com', 'buzzfile.com', 'dandb.com',
             // business listings and reviews
             'yell.com', 'thomsonlocal.com', 'freeindex.co.uk', 'scoot.co.uk', 'cylex-uk.co.uk', 'hotfrog.co.uk',
             'yelp.com', 'yelp.co.uk', 'trustpilot.com', 'checkatrade.com', 'bark.com',
@@ -123,6 +140,14 @@ return [
     // P4.1 (D108): the public partner directory; fetched with the crawler's User-Agent and robots rules.
     'laravel_partners' => [
         'url' => 'https://laravel.com/partners',
+    ],
+
+    // Website leads (D111): Google Places API (New) Text Search — never scrape Maps HTML.
+    'google_places' => [
+        'key' => env('GOOGLE_PLACES_API_KEY'),
+        'base_url' => env('GOOGLE_PLACES_BASE_URL', 'https://places.googleapis.com'),
+        'timeout' => 20,
+        'per_minute' => 30,
     ],
 
 ];

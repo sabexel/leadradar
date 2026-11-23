@@ -10,6 +10,8 @@ namespace App\Enums;
 enum DataSource: string
 {
     case CompaniesHouse = 'companies_house';
+    case Kvk = 'kvk';
+    case OpenCorporates = 'opencorporates';
     case Website = 'website';
     case Manual = 'manual';
 }

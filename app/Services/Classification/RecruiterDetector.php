@@ -29,6 +29,11 @@ final class RecruiterDetector
         'selection (?:ltd|limited)',
         'appointments',
         'employment (?:agency|services|ltd|limited)',
+        // Dutch (NL, D110)
+        'werving',
+        'uitzend\w*',
+        'detacher\w*',
+        'personeelsdienst\w*',
     ];
 
     /**
@@ -40,12 +45,15 @@ final class RecruiterDetector
         '\b(?:our|my) client (?:is|are|has|have|based|requires|seeks|seeking|needs)\b',
         '\bhiring for (?:a|our|my) client\b',
         '\brecruiting for (?:a|our|my) client\b',
+        '\bnamens (?:onze|een|mijn) (?:opdrachtgever|klant)\b',
+        '\bvoor (?:onze|een|mijn) opdrachtgever\b',
+        '\bonze opdrachtgever (?:is|zoekt|heeft|biedt)\b',
     ];
 
     /**
-     * SIC 2007 codes for employment activities.
+     * Employment activities: division 78 in both UK SIC 2007 and Dutch SBI 2008.
      */
-    private const RECRUITER_SIC_CODES = ['78100', '78109', '78200', '78300'];
+    private const RECRUITER_CODE_PREFIX = '78';
 
     public function isRecruiterName(string $employerName): bool
     {
@@ -82,6 +90,6 @@ final class RecruiterDetector
      */
     public function hasRecruiterSicCode(?array $sicCodes): bool
     {
-        return $sicCodes !== null && array_intersect($sicCodes, self::RECRUITER_SIC_CODES) !== [];
+        return collect($sicCodes ?? [])->contains(fn (string $code): bool => str_starts_with($code, self::RECRUITER_CODE_PREFIX));
     }
 }

@@ -42,4 +42,42 @@ return [
 
     'alert_email' => env('LEADRADAR_ALERT_EMAIL'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Website leads — Google Places types (D111)
+    |--------------------------------------------------------------------------
+    |
+    | Curated Table A types the owner can enable on Settings. Labels are shown
+    | in the UI; values are sent as includedType to Places Text Search.
+    |
+    */
+
+    'place_types' => [
+        'plumber' => 'Plumber',
+        'electrician' => 'Electrician',
+        'roofing_contractor' => 'Roofer',
+        'painter' => 'Painter',
+        'locksmith' => 'Locksmith',
+        'carpenter' => 'Carpenter',
+        'hair_salon' => 'Hair salon',
+        'beauty_salon' => 'Beauty salon',
+        'barber_shop' => 'Barber',
+        'nail_salon' => 'Nail salon',
+        'restaurant' => 'Restaurant',
+        'cafe' => 'Cafe',
+        'bakery' => 'Bakery',
+        'meal_takeaway' => 'Takeaway',
+        'dentist' => 'Dentist',
+        'physiotherapist' => 'Physiotherapist',
+        'veterinary_care' => 'Vet',
+        'gym' => 'Gym',
+        'car_repair' => 'Car repair',
+        'real_estate_agency' => 'Estate agent',
+        'moving_company' => 'Removals',
+        'storage' => 'Storage',
+        'laundry' => 'Laundry',
+        'florist' => 'Florist',
+        'funeral_home' => 'Funeral home',
+    ],
+
 ];

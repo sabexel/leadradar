@@ -4,6 +4,7 @@ export type CompanyFilters = {
     status: string[];
     outreach: string[];
     type: string[];
+    product: string | null;
     score_min: number | null;
     score_max: number | null;
     country: string | null;
@@ -26,8 +27,12 @@ export type CompanyRow = {
     website: string | null;
     score: number | null;
     type: string;
+    product: string;
     location: string | null;
     country: string;
+    phone: string | null;
+    reviewCount: number | null;
+    emailConsentRequired: boolean;
     registrationNumber: string | null;
     founders: {
         id: number;
@@ -67,6 +72,7 @@ export type CompaniesIndexProps = {
         status: Option[];
         outreach: Option[];
         type: Option[];
+        product: Option[];
         source: Option[];
         rejectReason: Option[];
         step: Option[];

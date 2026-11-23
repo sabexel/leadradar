@@ -38,6 +38,12 @@ function validSettings(array $overrides = []): array
             'locations' => ['Leeds', ' York ', ''],
         ],
         'laravel_partners_enabled' => false,
+        'website_places' => [
+            'per_day' => 15,
+            'min_reviews' => 40,
+            'cities' => ['Manchester', ''],
+            'types' => ['plumber', 'not-a-type', 'dentist'],
+        ],
     ], $overrides);
 }
 
@@ -63,15 +69,11 @@ it('shows the settings and which keys are configured, never their values', funct
         ->component('configuration/edit')
         ->where('settings.daily_qualified_target', 50)
         ->where('settings.qualify_threshold', 6)
-        ->where('settings.keywords', ['laravel'])
+        ->where('settings.keywords', ['laravel', 'php laravel', 'laravel developer', 'livewire'])
         ->where('settings.caps.millionverifier_per_day', 150)
-        ->where('services', [
-            ['value' => 'companies_house', 'label' => 'Companies House', 'configured' => true],
-            ['value' => 'reed', 'label' => 'Reed', 'configured' => false],
-            ['value' => 'adzuna', 'label' => 'Adzuna', 'configured' => false],
-            ['value' => 'millionverifier', 'label' => 'MillionVerifier', 'configured' => true],
-            ['value' => 'brave', 'label' => 'Brave Search', 'configured' => false],
-        ]));
+        ->where('settings.website_places.min_reviews', 30)
+        ->has('placeTypes')
+        ->has('services'));
 
     expect($response->getContent())->not->toContain('secret-ch-key-123')->not->toContain('secret-mv-key-456');
 });
@@ -93,7 +95,11 @@ it('saves cleaned settings', function () {
         ->and(Setting::get('source.ch_sic.min_age_years'))->toBe(3)
         ->and(Setting::get('source.ch_sic.sic_codes'))->toBe(['62012', '62020'])
         ->and(Setting::get('source.ch_sic.locations'))->toBe(['Leeds', 'York'])
-        ->and(Setting::get('source.laravel_partners.enabled'))->toBeFalse();
+        ->and(Setting::get('source.laravel_partners.enabled'))->toBeFalse()
+        ->and(Setting::get('source.places.per_day'))->toBe(15)
+        ->and(Setting::get('source.places.min_reviews'))->toBe(40)
+        ->and(Setting::get('source.places.cities'))->toBe(['Manchester'])
+        ->and(Setting::get('source.places.types'))->toBe(['plumber', 'dentist']);
 });
 
 it('shows the Companies House search settings', function () {

@@ -28,9 +28,10 @@ final readonly class Officer
 
     /**
      * Natural-person directors and LLP members. Secretaries and corporate officers are not founders.
+     * `founder` = a US president, owner or LLC member from OpenCorporates (D110).
      */
     public function isFounderRole(): bool
     {
-        return in_array($this->role, ['director', 'llp-member', 'llp-designated-member'], true);
+        return in_array($this->role, ['director', 'llp-member', 'llp-designated-member', 'founder'], true);
     }
 }

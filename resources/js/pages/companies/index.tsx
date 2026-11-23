@@ -10,6 +10,7 @@ import {
     X,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { EmailActions } from '@/components/email-actions';
 import {
     humanise,
     ScoreBadge,
@@ -48,6 +49,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { bulk, exportMethod, index, show } from '@/routes/companies';
+import type { OutreachDraftInput } from '@/lib/draft-outreach-email';
 import type {
     CompaniesIndexProps,
     CompanyFilters,
@@ -304,6 +306,7 @@ function FilterBar({
         filters.status.length > 0 ||
         filters.outreach.length > 0 ||
         filters.type.length > 0 ||
+        filters.product !== null ||
         filters.score_min !== null ||
         filters.score_max !== null ||
         filters.country !== null ||
@@ -354,6 +357,12 @@ function FilterBar({
                     value={filters.type}
                     onChange={(type) => visit({ type })}
                 />
+                <SingleSelect
+                    label="Product"
+                    value={filters.product}
+                    options={options.product}
+                    onChange={(product) => visit({ product })}
+                />
 
                 <SingleSelect
                     label="Country"
@@ -389,6 +398,7 @@ function FilterBar({
                                 status: [],
                                 outreach: [],
                                 type: [],
+                                product: null,
                                 score_min: null,
                                 score_max: null,
                                 country: null,
@@ -677,17 +687,26 @@ function CompanyTableRow({
             <TableCell className="font-mono text-xs">
                 {company.registrationNumber ?? '—'}
             </TableCell>
-            <FounderCell founder={founder(1)} />
-            <FounderCell founder={founder(2)} />
+            <FounderCell company={company} founder={founder(1)} />
+            <FounderCell company={company} founder={founder(2)} />
             <TableCell className="max-w-48">
                 {company.contactEmail ? (
                     <div className="flex flex-col">
                         <span className="truncate text-sm">
                             {company.contactEmail.email}
                         </span>
-                        <VerificationBadge
-                            status={company.contactEmail.status}
-                        />
+                        <div className="flex flex-wrap items-center gap-1">
+                            <VerificationBadge
+                                status={company.contactEmail.status}
+                            />
+                            <EmailActions
+                                email={company.contactEmail.email}
+                                verified={
+                                    company.contactEmail.status === 'ok'
+                                }
+                                draft={outreachDraft(company, null)}
+                            />
+                        </div>
                     </div>
                 ) : (
                     '—'
@@ -738,9 +757,28 @@ function CompanyTableRow({
     );
 }
 
+function outreachDraft(
+    company: CompanyRow,
+    recipientName: string | null,
+): Omit<OutreachDraftInput, 'recipientEmail'> {
+    return {
+        companyName: company.name,
+        product: company.product,
+        type: company.type,
+        website: company.website,
+        emailConsentRequired: company.emailConsentRequired,
+        recipientName,
+        signalTitle: company.signal?.title ?? null,
+        signalSource: company.signal?.source ?? null,
+        reviewCount: company.reviewCount,
+    };
+}
+
 function FounderCell({
+    company,
     founder,
 }: {
+    company: CompanyRow;
     founder: CompanyRow['founders'][number] | undefined;
 }) {
     if (!founder) {
@@ -768,7 +806,14 @@ function FounderCell({
                     <span className="truncate text-xs text-muted-foreground">
                         {founder.email}
                     </span>
-                    <VerificationBadge status={founder.emailStatus} />
+                    <div className="flex flex-wrap items-center gap-1">
+                        <VerificationBadge status={founder.emailStatus} />
+                        <EmailActions
+                            email={founder.email}
+                            verified={founder.emailStatus === 'ok'}
+                            draft={outreachDraft(company, founder.name)}
+                        />
+                    </div>
                 </div>
             )}
         </TableCell>

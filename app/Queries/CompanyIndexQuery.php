@@ -6,6 +6,7 @@ namespace App\Queries;
 
 use App\Enums\CompanyType;
 use App\Enums\EmailVerificationStatus;
+use App\Enums\LeadProduct;
 use App\Enums\LeadStatus;
 use App\Enums\OutreachStatus;
 use App\Enums\RejectReason;
@@ -32,9 +33,10 @@ final class CompanyIndexQuery
      * The filters actually applied, normalised — sent back to the page so the UI shows the real state.
      *
      * @return array{
-     *     status: list<string>, outreach: list<string>, type: list<string>, score_min: float|null, score_max: float|null,
-     *     country: string|null, source: string|null, qualified_from: string|null, qualified_to: string|null,
-     *     verified: bool, linkedin: bool, reject_reason: string|null, q: string|null, sort: string, dir: string, per_page: int
+     *     status: list<string>, outreach: list<string>, type: list<string>, product: string|null,
+     *     score_min: float|null, score_max: float|null, country: string|null, source: string|null,
+     *     qualified_from: string|null, qualified_to: string|null, verified: bool, linkedin: bool,
+     *     reject_reason: string|null, q: string|null, sort: string, dir: string, per_page: int
      * }
      */
     public function filters(Request $request): array
@@ -50,6 +52,7 @@ final class CompanyIndexQuery
             'status' => $this->enumList($request, 'status', LeadStatus::class),
             'outreach' => $this->enumList($request, 'outreach', OutreachStatus::class),
             'type' => $this->enumList($request, 'type', CompanyType::class),
+            'product' => LeadProduct::tryFrom((string) $request->query('product', ''))?->value,
             'score_min' => $this->score($request->query('score_min')),
             'score_max' => $this->score($request->query('score_max')),
             'country' => preg_match('/^[A-Z]{2}$/', $country) === 1 ? $country : null,
@@ -102,6 +105,10 @@ final class CompanyIndexQuery
 
         if ($filters['type'] !== []) {
             $query->whereIn('company_type', $filters['type']);
+        }
+
+        if ($filters['product'] !== null) {
+            $query->where('lead_product', $filters['product']);
         }
 
         if ($filters['score_min'] !== null) {
@@ -239,8 +246,12 @@ final class CompanyIndexQuery
             'website' => $company->website,
             'score' => $company->score === null ? null : (float) $company->score,
             'type' => $company->company_type->value,
+            'product' => $company->lead_product->value,
             'location' => $company->location,
             'country' => $company->country,
+            'phone' => $company->phone,
+            'reviewCount' => $company->review_count,
+            'emailConsentRequired' => $company->email_consent_required,
             'registrationNumber' => $company->registration_number,
             'founders' => $company->founders->map(fn ($person): array => [
                 'id' => $person->id,

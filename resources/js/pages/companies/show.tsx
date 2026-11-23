@@ -1,6 +1,7 @@
 import { Head, router } from '@inertiajs/react';
 import { ExternalLink, Linkedin, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
+import { EmailActions } from '@/components/email-actions';
 import {
     humanise,
     ScoreBadge,
@@ -9,6 +10,7 @@ import {
 } from '@/components/lead-badges';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import type { OutreachDraftInput } from '@/lib/draft-outreach-email';
 import {
     Card,
     CardContent,
@@ -69,13 +71,17 @@ export default function CompanyShow(props: CompanyDetailProps) {
 
                 <div className="grid gap-4 lg:grid-cols-3">
                     <div className="flex flex-col gap-4 lg:col-span-2">
-                        <CompanyCard company={company} />
+                        <CompanyCard
+                            company={company}
+                            signal={props.signals[0] ?? null}
+                        />
                         <div className="grid gap-4 md:grid-cols-2">
                             {[1, 2].map((position) => (
                                 <FounderCard
                                     key={position}
                                     position={position}
-                                    companyId={company.id}
+                                    company={company}
+                                    signal={props.signals[0] ?? null}
                                     founder={props.founders.find(
                                         (f) => f.position === position,
                                     )}
@@ -132,9 +138,9 @@ function Header({ company, options }: CompanyDetailProps) {
                             {company.domain ?? company.website}
                         </ExternalAnchor>
                     )}
-                    {company.companiesHouseUrl && (
-                        <ExternalAnchor href={company.companiesHouseUrl}>
-                            Companies House
+                    {company.registryUrl && (
+                        <ExternalAnchor href={company.registryUrl}>
+                            {company.registryLabel ?? 'Registry'}
                         </ExternalAnchor>
                     )}
                     {company.qualifiedAt && (
@@ -188,7 +194,13 @@ function Header({ company, options }: CompanyDetailProps) {
     );
 }
 
-function CompanyCard({ company }: { company: CompanyDetailProps['company'] }) {
+function CompanyCard({
+    company,
+    signal,
+}: {
+    company: CompanyDetailProps['company'];
+    signal: CompanyDetailProps['signals'][number] | null;
+}) {
     const address = company.registeredAddress;
 
     return (
@@ -212,6 +224,22 @@ function CompanyCard({ company }: { company: CompanyDetailProps['company'] }) {
                             .filter(Boolean)
                             .join(' · ')}
                     </Field>
+                    <Field label="Product">
+                        {company.product === 'website'
+                            ? 'Needs a website'
+                            : 'Laravel'}
+                    </Field>
+                    <Field label="Phone">{company.phone}</Field>
+                    <Field label="Google reviews">
+                        {company.reviewCount !== null &&
+                            company.reviewCount !== undefined &&
+                            String(company.reviewCount)}
+                    </Field>
+                    {company.emailConsentRequired && (
+                        <Field label="Email outreach">
+                            Consent required (PECR) — prefer phone
+                        </Field>
+                    )}
                     <Field label="Registration number">
                         {company.registrationNumber && (
                             <span className="font-mono">
@@ -239,10 +267,16 @@ function CompanyCard({ company }: { company: CompanyDetailProps['company'] }) {
                         {address}
                     </Field>
                     <Field label="Contact email">
-                        <EmailLine email={company.contactEmail} />
+                        <EmailLine
+                            email={company.contactEmail}
+                            draft={showDraft(company, signal, null)}
+                        />
                     </Field>
                     <Field label="Careers email">
-                        <EmailLine email={company.careersEmail} />
+                        <EmailLine
+                            email={company.careersEmail}
+                            draft={showDraft(company, signal, null)}
+                        />
                     </Field>
                 </dl>
             </CardContent>
@@ -250,15 +284,36 @@ function CompanyCard({ company }: { company: CompanyDetailProps['company'] }) {
     );
 }
 
+function showDraft(
+    company: CompanyDetailProps['company'],
+    signal: CompanyDetailProps['signals'][number] | null,
+    recipientName: string | null,
+): Omit<OutreachDraftInput, 'recipientEmail'> {
+    return {
+        companyName: company.name,
+        product: company.product,
+        type: company.type,
+        website: company.website,
+        emailConsentRequired: company.emailConsentRequired,
+        recipientName,
+        signalTitle: signal?.title ?? null,
+        signalSource: signal?.source ?? null,
+        reviewCount: company.reviewCount,
+    };
+}
+
 function FounderCard({
     position,
     founder,
-    companyId,
+    company,
+    signal,
 }: {
     position: number;
     founder: CompanyDetailProps['founders'][number] | undefined;
-    companyId: number;
+    company: CompanyDetailProps['company'];
+    signal: CompanyDetailProps['signals'][number] | null;
 }) {
+    const companyId = company.id;
     return (
         <Card>
             <CardHeader>
@@ -309,6 +364,11 @@ function FounderCard({
                             <EmailLine
                                 email={founder.email}
                                 companyId={companyId}
+                                draft={showDraft(
+                                    company,
+                                    signal,
+                                    founder.name,
+                                )}
                             />
                         </div>
 
@@ -352,9 +412,11 @@ function FounderCard({
 function EmailLine({
     email,
     companyId,
+    draft,
 }: {
     email: EmailDetail | null;
     companyId?: number;
+    draft?: Omit<OutreachDraftInput, 'recipientEmail'>;
 }) {
     const [sent, setSent] = useState(false);
 
@@ -366,6 +428,13 @@ function EmailLine({
         <div className="flex flex-wrap items-center gap-2">
             <span className="break-all">{email.email}</span>
             <VerificationBadge status={email.status} />
+            {draft && (
+                <EmailActions
+                    email={email.email}
+                    verified={email.status === 'ok'}
+                    draft={draft}
+                />
+            )}
             {email.sourceUrl ? (
                 <SourceLink
                     href={email.sourceUrl}

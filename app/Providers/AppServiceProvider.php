@@ -8,6 +8,8 @@ use App\Services\Crawler\WebsiteCrawlerService;
 use App\Services\Directories\LaravelPartnersService;
 use App\Services\JobBoards\AdzunaService;
 use App\Services\JobBoards\ReedService;
+use App\Services\Registries\KvkService;
+use App\Services\Registries\OpenCorporatesService;
 use App\Services\Search\BraveSearchService;
 use App\Services\Support\ApiUsageLimiter;
 use App\Services\Verification\MillionVerifierService;
@@ -34,6 +36,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(WebsiteCrawlerService::class);
         $this->app->singleton(MillionVerifierService::class);
         $this->app->singleton(LaravelPartnersService::class);
+        $this->app->singleton(KvkService::class);
+        $this->app->singleton(OpenCorporatesService::class);
     }
 
     /**

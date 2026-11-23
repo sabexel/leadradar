@@ -23,10 +23,10 @@ final class CrawlPlanner
      */
     private const CANDIDATES = [
         PageType::Contact->value => 'contact',
-        PageType::Team->value => 'team|people|our-people|meet-the',
-        PageType::About->value => 'about',
-        PageType::Careers->value => 'careers|jobs|vacancies|work-with-us|join-us|join-the-team',
-        PageType::Services->value => 'services|what-we-do|laravel|case-stud|our-work|portfolio',
+        PageType::Team->value => 'team|people|our-people|meet-the|wie-zijn-wij|ons-team',
+        PageType::About->value => 'about|over-ons',
+        PageType::Careers->value => 'careers|jobs|vacancies|work-with-us|join-us|join-the-team|vacatures|werken-bij|werkenbij',
+        PageType::Services->value => 'services|what-we-do|laravel|case-stud|our-work|portfolio|diensten|ons-werk|projecten',
     ];
 
     private const SKIP_EXTENSIONS = '/\.(?:pdf|jpe?g|png|gif|svg|webp|zip|docx?|xlsx?|pptx?|mp4|mp3|css|js|xml|ico)$/i';

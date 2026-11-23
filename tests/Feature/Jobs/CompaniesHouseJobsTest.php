@@ -343,6 +343,6 @@ it('does not start the UK registry search for non-UK companies', function () {
 
     app(AdvanceLeadPipelineAction::class)->run($company);
 
-    Queue::assertNothingPushed();
-    expect($company->refresh()->status)->toBe(LeadStatus::Discovered);
+    // A Dutch company goes to its own registry (KVK), never to Companies House.
+    Queue::assertNotPushed(SearchCompaniesHouseJob::class);
 });

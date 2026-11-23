@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Queries;
 
 use App\Actions\RetryPipelineStepAction;
+use App\Enums\Registry;
 use App\Models\Company;
 use App\Models\EmailAddress;
 use App\Models\PipelineEvent;
@@ -15,8 +16,6 @@ use App\Models\Signal;
  */
 final class CompanyDetailQuery
 {
-    private const COMPANIES_HOUSE_URL = 'https://find-and-update.company-information.service.gov.uk/company/';
-
     public function __construct(private readonly RetryPipelineStepAction $retry) {}
 
     /**
@@ -33,6 +32,8 @@ final class CompanyDetailQuery
             'pipelineEvents' => fn ($q) => $q->orderBy('created_at')->orderBy('id'),
         ]);
 
+        $registry = Registry::tryFrom((string) $company->registry);
+
         return [
             'company' => [
                 'id' => $company->id,
@@ -42,10 +43,15 @@ final class CompanyDetailQuery
                 'domain' => $company->domain,
                 'location' => $company->location,
                 'country' => $company->country,
+                'phone' => $company->phone,
+                'reviewCount' => $company->review_count,
+                'product' => $company->lead_product->value,
+                'emailConsentRequired' => $company->email_consent_required,
                 'registeredAddress' => $this->address($company->registered_address),
                 'registrationNumber' => $company->registration_number,
-                'companiesHouseUrl' => $company->registry === 'companies_house' && $company->registration_number !== null
-                    ? self::COMPANIES_HOUSE_URL.rawurlencode($company->registration_number)
+                'registryLabel' => $registry?->label(),
+                'registryUrl' => $registry !== null && $company->registration_number !== null
+                    ? $registry->companyUrl($company->registration_number)
                     : null,
                 'companyStatus' => $company->company_status,
                 'companyKind' => $company->company_kind,

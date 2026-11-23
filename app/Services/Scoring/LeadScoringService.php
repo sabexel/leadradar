@@ -8,6 +8,7 @@ use App\DTOs\Scoring\LeadScore;
 use App\Enums\CompanyType;
 use App\Enums\EmailOrigin;
 use App\Enums\EmailVerificationStatus;
+use App\Enums\Registry;
 use App\Enums\RejectReason;
 use App\Enums\SignalSource;
 use App\Models\Company;
@@ -24,8 +25,6 @@ use Illuminate\Support\Collection;
  */
 final class LeadScoringService
 {
-    public const ALLOWED_FORMS = ['ltd', 'llp', 'plc'];
-
     /**
      * Companies House last-accounts types filed by small companies (D72).
      */
@@ -57,11 +56,14 @@ final class LeadScoringService
      */
     public function failedGate(Company $company): ?RejectReason
     {
+        $registry = Registry::forCountry($company->country);
+
         return match (true) {
-            $company->country !== 'GB' || $company->registry !== 'companies_house' || $company->registration_number === null => RejectReason::NotOnRegistry,
+            $registry === null || $company->registry !== $registry->value || $company->registration_number === null => RejectReason::NotOnRegistry,
             $company->company_status !== 'active' => RejectReason::NotActive,
-            ! in_array($company->company_kind, self::ALLOWED_FORMS, true) => RejectReason::WrongLegalForm,
+            ! in_array($company->company_kind, $registry->allowedForms(), true) => RejectReason::WrongLegalForm,
             $company->accounts_category === 'dormant' => RejectReason::Dormant,
+            $company->registry_no_mailing => RejectReason::NoMailing,
             $company->company_type === CompanyType::Recruiter => RejectReason::Recruiter,
             $company->company_type === CompanyType::Offshore => RejectReason::Offshore,
             $company->website === null => RejectReason::NoWebsite,

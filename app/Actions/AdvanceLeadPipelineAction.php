@@ -7,13 +7,18 @@ namespace App\Actions;
 use App\Enums\LeadStatus;
 use App\Enums\PipelineOutcome;
 use App\Enums\PipelineStep;
+use App\Enums\Registry;
 use App\Enums\RejectReason;
 use App\Jobs\Enrichment\CrawlCompanyWebsiteJob;
 use App\Jobs\Enrichment\FetchCompanyOfficersJob;
 use App\Jobs\Enrichment\FetchCompanyProfileJob;
+use App\Jobs\Enrichment\FetchKvkProfileJob;
+use App\Jobs\Enrichment\FetchOpenCorporatesCompanyJob;
 use App\Jobs\Enrichment\FindCompanyWebsiteJob;
 use App\Jobs\Enrichment\FindLinkedInProfileJob;
 use App\Jobs\Enrichment\SearchCompaniesHouseJob;
+use App\Jobs\Enrichment\SearchKvkJob;
+use App\Jobs\Enrichment\SearchOpenCorporatesJob;
 use App\Jobs\Enrichment\VerifyEmailJob;
 use App\Models\Company;
 use App\Services\Crawler\CrawlPlanner;
@@ -167,13 +172,22 @@ final class AdvanceLeadPipelineAction
 
     private function jobFor(Company $company): ?object
     {
-        // Only UK companies have a registry integration so far (NL/US come in P4.2).
-        $registry = $company->country === 'GB';
+        $registry = Registry::forCountry($company->country);
 
         return match ($company->pipeline_step) {
-            PipelineStep::RegistrySearch => $registry ? new SearchCompaniesHouseJob($company->id) : null,
-            PipelineStep::RegistryProfile => $registry ? new FetchCompanyProfileJob($company->id) : null,
-            PipelineStep::RegistryOfficers => $registry ? new FetchCompanyOfficersJob($company->id) : null,
+            PipelineStep::RegistrySearch => match ($registry) {
+                Registry::CompaniesHouse => new SearchCompaniesHouseJob($company->id),
+                Registry::Kvk => new SearchKvkJob($company->id),
+                Registry::OpenCorporates => new SearchOpenCorporatesJob($company->id),
+                null => null,
+            },
+            PipelineStep::RegistryProfile => match ($registry) {
+                Registry::CompaniesHouse => new FetchCompanyProfileJob($company->id),
+                Registry::Kvk => new FetchKvkProfileJob($company->id),
+                Registry::OpenCorporates => new FetchOpenCorporatesCompanyJob($company->id),
+                null => null,
+            },
+            PipelineStep::RegistryOfficers => $registry === Registry::CompaniesHouse ? new FetchCompanyOfficersJob($company->id) : null,
             PipelineStep::FindWebsite => new FindCompanyWebsiteJob($company->id),
             PipelineStep::Crawl => ($url = $this->crawlPlanner->next($company)) === null ? null : new CrawlCompanyWebsiteJob($company->id, $url),
             PipelineStep::VerifyEmails => ($email = $this->verificationPlanner->next($company)) === null ? null : new VerifyEmailJob($company->id, $email->id),

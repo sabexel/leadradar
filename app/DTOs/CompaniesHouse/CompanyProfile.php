@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 
 /**
  * `GET /company/{number}` — registry facts used by the qualification gates.
+ * KVK and OpenCorporates profiles are mapped onto the same shape (D110).
  */
 final readonly class CompanyProfile
 {
@@ -26,6 +27,7 @@ final readonly class CompanyProfile
         public ?CarbonImmutable $dateOfCreation,
         public bool $hasBeenLiquidated,
         public bool $hasInsolvencyHistory,
+        public bool $noMailing = false,
     ) {}
 
     public function locality(): ?string

@@ -13,6 +13,7 @@ enum RejectReason: string
     case NotActive = 'not_active';
     case WrongLegalForm = 'wrong_legal_form';
     case Dormant = 'dormant';
+    case NoMailing = 'no_mailing';
     case Recruiter = 'recruiter';
     case Offshore = 'offshore';
     case NoWebsite = 'no_website';
@@ -28,6 +29,7 @@ enum RejectReason: string
             self::NotActive => 'Not active',
             self::WrongLegalForm => 'Wrong legal form',
             self::Dormant => 'Dormant',
+            self::NoMailing => 'Asked the registry for no mailings',
             self::Recruiter => 'Recruiter',
             self::Offshore => 'Offshore',
             self::NoWebsite => 'No website',

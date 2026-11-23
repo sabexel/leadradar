@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\CompanyType;
+use App\Enums\LeadProduct;
 use App\Enums\LeadStatus;
 use App\Enums\OutreachStatus;
 use App\Enums\PipelineOutcome;
@@ -38,6 +39,12 @@ use Illuminate\Support\Str;
  * @property Carbon|null $incorporated_on
  * @property list<string>|null $sic_codes
  * @property string|null $accounts_category
+ * @property bool $registry_no_mailing
+ * @property LeadProduct $lead_product
+ * @property string|null $google_place_id
+ * @property int|null $review_count
+ * @property string|null $phone
+ * @property bool $email_consent_required
  * @property int|null $contact_email_id
  * @property int|null $careers_email_id
  * @property CompanyType $company_type
@@ -58,8 +65,9 @@ use Illuminate\Support\Str;
 #[Fillable([
     'name', 'legal_name', 'normalised_name', 'website', 'domain', 'country', 'location',
     'registered_address', 'registration_number', 'registry', 'company_status', 'company_kind',
-    'incorporated_on', 'sic_codes', 'accounts_category', 'contact_email_id', 'careers_email_id',
-    'company_type', 'laravel_evidence', 'offshore_evidence', 'status', 'pipeline_step', 'reject_reason',
+    'incorporated_on', 'sic_codes', 'accounts_category', 'registry_no_mailing', 'contact_email_id', 'careers_email_id',
+    'company_type', 'lead_product', 'google_place_id', 'review_count', 'phone', 'email_consent_required',
+    'laravel_evidence', 'offshore_evidence', 'status', 'pipeline_step', 'reject_reason',
     'score', 'score_breakdown', 'outreach_status', 'contacted_at', 'qualified_at', 'notes',
 ])]
 class Company extends Model
@@ -73,6 +81,8 @@ class Company extends Model
     protected $attributes = [
         'country' => 'GB',
         'company_type' => 'unknown',
+        'lead_product' => 'laravel',
+        'email_consent_required' => false,
         'status' => 'discovered',
         'pipeline_step' => 'registry_search',
         'outreach_status' => 'not_contacted',
@@ -87,7 +97,11 @@ class Company extends Model
             'registered_address' => 'array',
             'incorporated_on' => 'date',
             'sic_codes' => 'array',
+            'registry_no_mailing' => 'boolean',
             'company_type' => CompanyType::class,
+            'lead_product' => LeadProduct::class,
+            'review_count' => 'integer',
+            'email_consent_required' => 'boolean',
             'laravel_evidence' => 'array',
             'offshore_evidence' => 'array',
             'status' => LeadStatus::class,

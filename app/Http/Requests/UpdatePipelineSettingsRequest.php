@@ -34,6 +34,9 @@ final class UpdatePipelineSettingsRequest extends FormRequest
 
         $registry = $this->input('registry_search');
         $registry = is_array($registry) ? $registry : [];
+        $places = $this->input('website_places');
+        $places = is_array($places) ? $places : [];
+        $allowedTypes = array_keys(config('leadradar.place_types', []));
 
         $this->merge([
             'keywords' => array_values(array_unique(array_map('mb_strtolower', $clean($this->input('keywords'))))),
@@ -42,6 +45,14 @@ final class UpdatePipelineSettingsRequest extends FormRequest
                 ...$registry,
                 'sic_codes' => $clean($registry['sic_codes'] ?? []),
                 'locations' => $clean($registry['locations'] ?? []),
+            ],
+            'website_places' => [
+                ...$places,
+                'cities' => $clean($places['cities'] ?? []),
+                'types' => array_values(array_filter(
+                    $clean($places['types'] ?? []),
+                    fn (string $t): bool => in_array($t, $allowedTypes, true),
+                )),
             ],
         ]);
     }
@@ -75,6 +86,13 @@ final class UpdatePipelineSettingsRequest extends FormRequest
             'registry_search.locations' => ['array', 'max:20'],
             'registry_search.locations.*' => ['string', 'max:60'],
             'laravel_partners_enabled' => ['required', 'boolean'],
+            'website_places' => ['required', 'array'],
+            'website_places.per_day' => ['required', 'integer', 'min:0', 'max:200'],
+            'website_places.min_reviews' => ['required', 'integer', 'min:1', 'max:500'],
+            'website_places.cities' => ['array', 'max:30'],
+            'website_places.cities.*' => ['string', 'max:60'],
+            'website_places.types' => ['array', 'max:40'],
+            'website_places.types.*' => ['string', 'max:60'],
         ];
     }
 

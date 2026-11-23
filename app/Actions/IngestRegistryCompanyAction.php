@@ -8,13 +8,13 @@ use App\DTOs\CompaniesHouse\RegistryCompany;
 use App\Enums\LeadStatus;
 use App\Enums\PipelineOutcome;
 use App\Enums\PipelineStep;
+use App\Enums\Registry;
 use App\Enums\SignalSource;
 use App\Models\Company;
 use App\Models\ScrapeRun;
 use App\Models\Setting;
 use App\Models\Signal;
 use App\Services\Dedupe\CompanyMatcher;
-use App\Services\Scoring\LeadScoringService;
 use App\Services\Support\SuppressionList;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
@@ -62,7 +62,7 @@ final class IngestRegistryCompanyAction
     public function run(RegistryCompany $result, string $sicCode, string $location, ?ScrapeRun $run = null): bool
     {
         // Only forms the gates accept, and only live companies (docs/06) — nothing is spent on the rest.
-        if ($result->status !== 'active' || ! in_array($result->type, LeadScoringService::ALLOWED_FORMS, true)) {
+        if ($result->status !== 'active' || ! in_array($result->type, Registry::CompaniesHouse->allowedForms(), true)) {
             return false;
         }
 
