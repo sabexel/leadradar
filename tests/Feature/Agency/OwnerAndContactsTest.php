@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\AdvanceLeadPipelineAction;
 use App\Actions\ApplyLinkedInResultAction;
+use App\DTOs\Search\SearchResult;
 use App\Enums\DataSource;
 use App\Enums\LeadProduct;
 use App\Enums\LeadStatus;
@@ -73,4 +74,27 @@ it('does not search for an owner when the registry already gave founders, or for
 
     expect($linkedIn->needsDecisionMakerSearch($laravel))->toBeFalse()
         ->and($linkedIn->needsDecisionMakerSearch($withFounder))->toBeFalse();
+});
+
+it('ignores place words, strips degrees, and never reuses one profile for two leads', function () {
+    $selector = app(DecisionMakerSelector::class);
+    $hit = fn (string $title, string $url) => new SearchResult($title, $url, null, 'linkedin.com');
+
+    // "Ajman" is the city, not the company: an owner of another Ajman clinic is not this clinic's owner.
+    expect($selector->select('Ajman Medical Center', collect([
+        $hit('Jamil Ahmed - Founder - Al Amumah Medical Centre Ajman | LinkedIn', 'https://ae.linkedin.com/in/jamil-ahmed-1'),
+    ]), 'Ajman'))->toBeNull();
+
+    $found = $selector->select('Central Clinic', collect([
+        $hit('Tomislav Example M.D. - Medical Director - Central Clinic | LinkedIn', 'https://ae.linkedin.com/in/tomislav-example'),
+    ]), 'Dubai');
+    expect($found['first_name'])->toBe('Tomislav')->and($found['last_name'])->toBe('Example');
+
+    $first = Company::factory()->create(['lead_product' => LeadProduct::Business]);
+    $second = Company::factory()->create(['lead_product' => LeadProduct::Business]);
+    $linkedIn = app(ApplyLinkedInResultAction::class);
+    $owner = ['first_name' => 'Jamil', 'last_name' => 'Ahmed', 'role' => 'Founder', 'url' => 'https://www.linkedin.com/in/jamil-ahmed-1', 'source_url' => 'https://ae.linkedin.com/in/jamil-ahmed-1'];
+
+    expect($linkedIn->applyDecisionMaker($first, $owner))->not->toBeNull()
+        ->and($linkedIn->applyDecisionMaker($second, $owner))->toBeNull();
 });

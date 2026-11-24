@@ -609,3 +609,9 @@
 - Run #8 (live): 30 UAE businesses → 0 qualified under the old rules (17 good sites, 9 no email); 4 timeouts. The 30
   are re-crawled after this change to pick up phone/WhatsApp/owner.
 - Decisions: D130–D133.
+
+## 2026-11-24 — UAE Re-run with contacts and owners (D134)
+- Done: 30 UAE businesses re-crawled under D131–D133: 26 qualified; 25 with phone, 21 with WhatsApp. Owner search had false matches (one person on 4 clinics via the city word) → D134 fix, owner search redone: 16 owners, none shared (e.g. Cleveland Clinic Abu Dhabi → its CEO). 2 sites still time out.
+- Tests: owner-matching test (place words, degrees, profile reuse). Agency + search tests pass.
+- Decisions: D134.
+- Notes / follow-ups: UAE leads found so far are clinics only (run #8 used the old planner); next runs mix categories (D129).

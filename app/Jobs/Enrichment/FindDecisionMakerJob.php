@@ -68,7 +68,7 @@ final class FindDecisionMakerJob implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $linkedIn->applyDecisionMaker($company, $selector->select($company->name, $results));
+        $linkedIn->applyDecisionMaker($company, $selector->select($company->name, $results, $company->location));
         $advance->run($company->refresh());
     }
 }

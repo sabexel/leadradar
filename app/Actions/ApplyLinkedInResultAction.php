@@ -46,6 +46,12 @@ final class ApplyLinkedInResultAction
      */
     public function applyDecisionMaker(Company $company, ?array $found): ?Person
     {
+        if ($found !== null && Person::query()->where('linkedin_url', $found['url'])->where('company_id', '!=', $company->id)->exists()) {
+            $company->recordEvent(PipelineStep::FindLinkedIn, PipelineOutcome::Skipped, 'Decision-maker search: profile already belongs to another lead — ignored', ['linkedin' => $found['url']]);
+
+            return null;
+        }
+
         if ($found === null) {
             $company->recordEvent(PipelineStep::FindLinkedIn, PipelineOutcome::Skipped, 'Decision-maker search: nobody found');
 
