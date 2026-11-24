@@ -366,3 +366,21 @@ it('adds agencies from Google Places with rating and review filters (D128)', fun
     expect(Company::query()->pluck('domain')->all())->toBe(['maplepixel.example.ca'])
         ->and(Company::sole()->lead_product)->toBe(LeadProduct::Agency);
 });
+
+it('gives every market its share of the daily agency cap (D129)', function () {
+    Setting::put('source.agency.per_day', 60);
+    Setting::put('source.agency.countries', ['GB', 'US', 'CA', 'AU', 'IE', 'NZ', 'NL', 'BE', 'DK', 'SE', 'NO', 'FI', 'DE', 'AT', 'AE', 'XX', 'YY', 'ZZ', 'QQ', 'WW']);
+
+    expect(app(IngestAgencyAction::class)->shareFor())->toBe(6);
+
+    Setting::put('source.agency.per_day', 1);
+    expect(app(IngestAgencyAction::class)->shareFor())->toBe(3);
+
+    // With a share of 6, a seventh Canadian agency the same day is left for tomorrow.
+    Company::factory()->count(6)->create(['country' => 'CA', 'lead_product' => LeadProduct::Agency])
+        ->each(fn (Company $c) => Signal::factory()->for($c)->create(['source' => SignalSource::AgencySearch]));
+    Setting::put('source.agency.per_day', 60);
+    runAgencySearch('CA');
+
+    expect(Company::query()->where('country', 'CA')->count())->toBe(6);
+});

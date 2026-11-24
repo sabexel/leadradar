@@ -33,12 +33,12 @@ final class BusinessSearchPlanner
 
             foreach (array_filter((array) ($market['cities'] ?? []), 'is_string') as $city) {
                 foreach (array_filter((array) ($market['categories'] ?? []), 'is_string') as $category) {
-                    $byCity["{$country}|{$city}"][] = ['phrase' => $category, 'city' => $city, 'country' => $country];
+                    $byCity["{$country}|{$category}"][] = ['phrase' => $category, 'city' => $city, 'country' => $country];
                 }
             }
         }
 
-        // Interleave cities so one day covers several of them.
+        // Interleave categories so one day covers many kinds of business, not one category in every city (D129).
         $list = [];
         $longest = $byCity === [] ? 0 : max(array_map('count', $byCity));
 

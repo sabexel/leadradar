@@ -592,3 +592,9 @@
   error; the file passes alone). Pint, Larastan, vp check, tsc, build clean.
 - Decisions: D123–D128.
 - Notes / follow-ups: UAE and business leads not yet run live. Places needs the owner's key. Deploy still postponed.
+
+## 2026-11-24 — UAE First live UAE run (#8) + fair spread (D129)
+- Done: run #8 live — 10 UAE business searches ran (Brave ALL), 30 UAE businesses with own sites found (cap), all clinics → planner now rotates categories first; agency cap now shared per market. Business leads were still crawling when checked.
+- Tests: planner order updated; per-market share test. Agency + search tests pass.
+- Decisions: D129.
+- Notes / follow-ups: UAE agencies get their share from the next run. MillionVerifier balance ~94 limits verification.

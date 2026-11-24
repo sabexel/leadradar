@@ -55,6 +55,33 @@ final class IngestAgencyAction
     }
 
     /**
+     * New agency-search leads today in one country.
+     *
+     * @phpstan-impure
+     */
+    public function createdTodayIn(string $country): int
+    {
+        $timezone = (string) config('leadradar.timezone', 'Europe/London');
+
+        return Company::query()
+            ->where('country', strtoupper($country))
+            ->where('lead_product', LeadProduct::Agency)
+            ->where('created_at', '>=', CarbonImmutable::now($timezone)->startOfDay()->utc())
+            ->whereHas('signals', fn ($q) => $q->where('source', SignalSource::AgencySearch))
+            ->count();
+    }
+
+    /**
+     * Per-market share of `source.agency.per_day`: twice an even split, at least 3.
+     */
+    public function shareFor(): int
+    {
+        $markets = max(1, count(array_filter((array) Setting::get('source.agency.countries'), 'is_string')));
+
+        return max(3, (int) ceil(2 * (int) Setting::get('source.agency.per_day') / $markets));
+    }
+
+    /**
      * @param  array{name: string, domain: string, url: string, title: string}  $agency
      * @return bool true when a new lead was created
      */
@@ -64,6 +91,11 @@ final class IngestAgencyAction
         $normalised = $this->matcher->normalise($agency['name']);
 
         if ($normalised === '' || $this->suppressions->isSuppressed(new Company(['domain' => $agency['domain']]))) {
+            return false;
+        }
+
+        // Each market gets a share of the daily cap, so the big markets can't use it all up (D129).
+        if ($this->createdTodayIn($country) >= $this->shareFor()) {
             return false;
         }
 

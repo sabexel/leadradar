@@ -56,7 +56,7 @@ it('plans business searches across UAE cities and categories', function () {
 
     $batch = app(BusinessSearchPlanner::class)->nextBatch();
 
-    expect(array_map(fn ($b) => "{$b['phrase']} {$b['city']}", $batch))->toBe(['gym Dubai', 'gym Sharjah', 'spa Dubai'])
+    expect(array_map(fn ($b) => "{$b['phrase']} {$b['city']}", $batch))->toBe(['gym Dubai', 'spa Dubai', 'gym Sharjah'])
         ->and(Setting::get('source.business.cursor'))->toBe(3);
 });
 
