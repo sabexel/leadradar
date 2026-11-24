@@ -36,6 +36,7 @@ final class WebsiteCrawlerService extends ExternalApiService
         private readonly OffshoreSignalDetector $offshore,
         private readonly CompanyClassifier $classifier,
         private readonly TechStackDetector $stack,
+        private readonly PhoneExtractor $phones,
     ) {
         parent::__construct($limiter);
     }
@@ -142,6 +143,8 @@ final class WebsiteCrawlerService extends ExternalApiService
             $links = [];
         }
 
+        $contacts = $this->phones->extract($links);
+
         return new CrawlResult(
             url: $url,
             finalUrl: $finalUrl,
@@ -158,6 +161,8 @@ final class WebsiteCrawlerService extends ExternalApiService
                 ...$this->stack->detect($html, $text, $this->cookieNames($response), $pageType),
                 ...($pageType === PageType::Home && str_starts_with(strtolower($finalUrl), 'http://') ? ['audit:no_https'] : []),
             ],
+            phones: $contacts['phones'],
+            whatsapp: $contacts['whatsapp'],
             siteName: $siteName === null ? null : Str::limit(html_entity_decode($siteName, ENT_QUOTES | ENT_HTML5), 80, ''),
         );
     }

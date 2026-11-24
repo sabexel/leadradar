@@ -33,6 +33,7 @@ export type CompanyRow = {
     phone: string | null;
     reviewCount: number | null;
     techStack: string[];
+    whatsapp: string | null;
     emailConsentRequired: boolean;
     registrationNumber: string | null;
     founders: {

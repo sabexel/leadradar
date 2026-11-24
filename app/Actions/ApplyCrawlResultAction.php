@@ -61,12 +61,23 @@ final class ApplyCrawlResultAction
                         'agency_terms' => $result->agencyTerms,
                         'stack' => $result->stack,
                         'site_name' => $result->siteName,
+                        'phones' => $result->phones,
+                        'whatsapp' => $result->whatsapp,
                     ], fn (mixed $v): bool => $v !== null && $v !== []),
                 ],
             );
 
             foreach ($result->emails as $email) {
                 $this->storeEmail($company, $email);
+            }
+
+            // Phone / WhatsApp published on the site (D131): the first one found is kept.
+            if ($company->phone === null && $result->phones !== []) {
+                $company->update(['phone' => $result->phones[0]]);
+            }
+
+            if ($company->whatsapp === null && $result->whatsapp !== null) {
+                $company->update(['whatsapp' => $result->whatsapp]);
             }
 
             if ($result->stack !== []) {

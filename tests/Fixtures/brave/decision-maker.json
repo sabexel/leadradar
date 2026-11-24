@@ -1,0 +1,24 @@
+{
+    "type": "search",
+    "query": { "original": "site:linkedin.com/in \"Smile Example Dental\"" },
+    "web": {
+        "type": "search",
+        "results": [
+            {
+                "title": "Careers at Smile Example | LinkedIn",
+                "url": "https://ae.linkedin.com/company/smile-example",
+                "description": "Company page."
+            },
+            {
+                "title": "Sara Example - Receptionist - Smile Example Dental | LinkedIn",
+                "url": "https://ae.linkedin.com/in/sara-example",
+                "description": "Receptionist."
+            },
+            {
+                "title": "Dr. Omar Example - Founder & Medical Director - Smile Example Dental | LinkedIn",
+                "url": "https://ae.linkedin.com/in/omar-example-123",
+                "description": "Founder of Smile Example Dental, Dubai."
+            }
+        ]
+    }
+}

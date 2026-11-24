@@ -41,7 +41,7 @@ final class CompanyIndexQuery
      */
     public function filters(Request $request): array
     {
-        $sort = in_array($request->query('sort'), self::SORTS, true) ? (string) $request->query('sort') : 'score';
+        $sort = in_array($request->query('sort'), self::SORTS, true) ? (string) $request->query('sort') : 'qualified_at'; // newest qualified first (D130)
         $dir = $request->query('dir') === 'asc' ? 'asc' : ($request->query('dir') === 'desc' ? 'desc' : ($sort === 'name' ? 'asc' : 'desc'));
         $perPage = (int) $request->query('per_page', '25');
 
@@ -161,7 +161,8 @@ final class CompanyIndexQuery
         match ($filters['sort']) {
             // Unscored companies always last, whichever way the score is sorted.
             'score' => $query->orderByRaw('score is null')->orderBy('score', $dir)->orderByDesc('qualified_at'),
-            'qualified_at' => $query->orderByRaw('qualified_at is null')->orderBy('qualified_at', $dir),
+            // Not-yet-qualified leads after the qualified ones, newest found first.
+            'qualified_at' => $query->orderByRaw('qualified_at is null')->orderBy('qualified_at', $dir)->orderByDesc('created_at'),
             default => $query->orderBy('name', $dir),
         };
 
@@ -252,6 +253,7 @@ final class CompanyIndexQuery
             'phone' => $company->phone,
             'reviewCount' => $company->review_count,
             'techStack' => $company->tech_stack ?? [],
+            'whatsapp' => $company->whatsapp,
             'emailConsentRequired' => $company->email_consent_required,
             'registrationNumber' => $company->registration_number,
             'founders' => $company->founders->map(fn ($person): array => [

@@ -240,7 +240,7 @@ function toQuery(filters: CompanyFilters): Record<string, QueryValue> {
     }
 
     // Defaults stay out of the URL.
-    if (query.sort === 'score') {
+    if (query.sort === 'qualified_at') {
         delete query.sort;
         if (query.dir === 'desc') {
             delete query.dir;
@@ -706,8 +706,26 @@ function CompanyTableRow({
                             />
                         </div>
                     </div>
-                ) : (
+                ) : company.phone || company.whatsapp ? null : (
                     '—'
+                )}
+                {company.phone && (
+                    <a
+                        href={`tel:${company.phone}`}
+                        className="block text-xs text-muted-foreground hover:underline"
+                    >
+                        ☎ {company.phone}
+                    </a>
+                )}
+                {company.whatsapp && (
+                    <a
+                        href={`https://wa.me/${company.whatsapp.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="block text-xs text-emerald-700 hover:underline dark:text-emerald-400"
+                    >
+                        WhatsApp {company.whatsapp}
+                    </a>
                 )}
             </TableCell>
             <TableCell className="max-w-48">

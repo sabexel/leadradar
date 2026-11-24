@@ -50,6 +50,11 @@ final class VerificationPlanner
 
         $agency = in_array($company->lead_product, [LeadProduct::Agency, LeadProduct::Business], true);
 
+        // Business leads (D133): one verification credit at most — phone / WhatsApp are their main route.
+        if ($company->lead_product === LeadProduct::Business && $emails->contains(fn (EmailAddress $e): bool => $e->verified_at !== null)) {
+            return null;
+        }
+
         // Agency leads need one working address, not every one (D120): stop at the first verified address.
         if ($agency && $emails->contains(fn (EmailAddress $e): bool => $e->verification_status === EmailVerificationStatus::Ok && $this->isFresh($e))) {
             return null;

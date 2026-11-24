@@ -14,4 +14,5 @@ enum DataSource: string
     case OpenCorporates = 'opencorporates';
     case Website = 'website';
     case Manual = 'manual';
+    case WebSearch = 'web_search';
 }

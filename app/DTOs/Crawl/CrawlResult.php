@@ -18,6 +18,7 @@ final readonly class CrawlResult
      * @param  list<DetectedSignal>  $laravelSignals
      * @param  list<DetectedSignal>  $offshoreSignals
      * @param  list<string>  $agencyTerms  agency-language phrases found (for re-classification)
+     * @param  list<string>  $phones  from tel: links (D131)
      * @param  list<string>  $stack  TechStackDetector output ("built:wordpress", "offers:shopify"…)
      */
     public function __construct(
@@ -35,6 +36,8 @@ final readonly class CrawlResult
         public ?string $skippedBecause = null,
         public array $stack = [],
         public ?string $siteName = null,
+        public array $phones = [],
+        public ?string $whatsapp = null,
     ) {}
 
     public static function skipped(string $url, PageType $pageType, string $reason, ?int $status = null): self

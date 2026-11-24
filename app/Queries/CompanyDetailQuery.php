@@ -46,6 +46,7 @@ final class CompanyDetailQuery
                 'phone' => $company->phone,
                 'reviewCount' => $company->review_count,
                 'techStack' => $company->tech_stack ?? [],
+                'whatsapp' => $company->whatsapp,
                 'product' => $company->lead_product->value,
                 'emailConsentRequired' => $company->email_consent_required,
                 'registeredAddress' => $this->address($company->registered_address),

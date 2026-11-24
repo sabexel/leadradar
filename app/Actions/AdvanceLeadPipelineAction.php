@@ -15,6 +15,7 @@ use App\Jobs\Enrichment\FetchCompanyProfileJob;
 use App\Jobs\Enrichment\FetchKvkProfileJob;
 use App\Jobs\Enrichment\FetchOpenCorporatesCompanyJob;
 use App\Jobs\Enrichment\FindCompanyWebsiteJob;
+use App\Jobs\Enrichment\FindDecisionMakerJob;
 use App\Jobs\Enrichment\FindLinkedInProfileJob;
 use App\Jobs\Enrichment\SearchCompaniesHouseJob;
 use App\Jobs\Enrichment\SearchKvkJob;
@@ -152,6 +153,10 @@ final class AdvanceLeadPipelineAction
                 return true;
 
             case PipelineStep::FindLinkedIn:
+                if ($this->linkedIn->needsDecisionMakerSearch($company)) {
+                    return false; // one search for the owner / founder first (D132)
+                }
+
                 if ($this->linkedIn->nextPerson($company) !== null) {
                     return false; // another founder to look up
                 }
@@ -191,7 +196,9 @@ final class AdvanceLeadPipelineAction
             PipelineStep::FindWebsite => new FindCompanyWebsiteJob($company->id),
             PipelineStep::Crawl => ($url = $this->crawlPlanner->next($company)) === null ? null : new CrawlCompanyWebsiteJob($company->id, $url),
             PipelineStep::VerifyEmails => ($email = $this->verificationPlanner->next($company)) === null ? null : new VerifyEmailJob($company->id, $email->id),
-            PipelineStep::FindLinkedIn => ($person = $this->linkedIn->nextPerson($company)) === null ? null : new FindLinkedInProfileJob($company->id, $person->id),
+            PipelineStep::FindLinkedIn => $this->linkedIn->needsDecisionMakerSearch($company)
+                ? new FindDecisionMakerJob($company->id)
+                : (($person = $this->linkedIn->nextPerson($company)) === null ? null : new FindLinkedInProfileJob($company->id, $person->id)),
             default => null, // every other step is local
         };
     }

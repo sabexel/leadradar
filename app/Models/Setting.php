@@ -62,7 +62,7 @@ class Setting extends Model
         'source.business.queries_per_day' => 10,
         'source.business.countries' => ['AE'],
         'source.business.cursor' => 0,
-        'business.qualify_threshold' => 4.0,
+        'business.qualify_threshold' => 2.0,
         // Job ads for any stack in every Adzuna market (D117): phrases, Adzuna country codes, new companies a day.
         'search.agency_keywords' => ['wordpress developer', 'shopify developer', 'woocommerce developer'],
         'search.agency_job_countries' => ['gb', 'us', 'ca', 'au', 'nz', 'nl', 'be', 'de', 'at'],

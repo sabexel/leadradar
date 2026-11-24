@@ -37,6 +37,7 @@ export type CompanyDetailProps = {
         phone: string | null;
         reviewCount: number | null;
         techStack: string[];
+        whatsapp: string | null;
         product: string;
         emailConsentRequired: boolean;
         registeredAddress: string | null;

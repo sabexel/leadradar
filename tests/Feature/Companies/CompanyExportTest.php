@@ -114,7 +114,7 @@ it('exports the table\'s filters and order, or only the selected rows', function
 
     $names = fn (array $query) => array_column(array_slice(csvRows($this->get(route('companies.export', $query))), 1), 1);
 
-    expect($names(['status' => ['qualified']]))->toBe(['Best Ltd', 'Good Ltd'])
+    expect($names(['status' => ['qualified'], 'sort' => 'score']))->toBe(['Best Ltd', 'Good Ltd'])
         ->and($names(['status' => ['qualified'], 'sort' => 'score', 'dir' => 'asc']))->toBe(['Good Ltd', 'Best Ltd'])
         ->and($names(['ids' => [$good->id]]))->toBe(['Good Ltd'])
         ->and($names([]))->toHaveCount(3);

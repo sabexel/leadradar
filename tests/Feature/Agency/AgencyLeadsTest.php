@@ -210,8 +210,11 @@ it('ingests agency job ads abroad as Agency leads that go straight to the websit
 });
 
 it('stops a lead that cannot reach the threshold before any email check', function () {
-    // An in-house team from a job ad, whose site offers nothing we serve: best case 0.75 + 1.5 + 1.5 < 4.5.
+    // An in-house team from a job ad, whose site offers nothing we serve: best case below 4.5. A fixed, neutral
+    // name: random factory names like "… Studio" read as agency language and change the classification.
     $company = Company::factory()->create([
+        'name' => 'Example Commerce Inc',
+        'legal_name' => 'EXAMPLE COMMERCE INC',
         'lead_product' => LeadProduct::Agency,
         'company_type' => CompanyType::DirectClient,
         'country' => 'US',

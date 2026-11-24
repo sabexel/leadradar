@@ -45,8 +45,15 @@ final class LeadScoringService
             $breakdown = $this->businessBreakdown($company);
             $total = min(10.0, round(array_sum(array_column($breakdown, 'points')), 1));
 
-            // Same gates as agencies (website, real address, not a recruiter, not suppressed).
-            return new LeadScore($total, $breakdown, $this->failedAgencyGate($company));
+            // Same gates as agencies, except that a published phone or WhatsApp number also makes a business
+            // reachable (D133) — UAE businesses answer WhatsApp more than email.
+            $gate = $this->failedAgencyGate($company);
+
+            if ($gate === RejectReason::NoValidEmail && ($company->phone !== null || $company->whatsapp !== null)) {
+                $gate = null;
+            }
+
+            return new LeadScore($total, $breakdown, $gate);
         }
 
         if ($company->lead_product === LeadProduct::Agency) {
@@ -156,6 +163,10 @@ final class LeadScoringService
                 'contact_ok' => $company->contactEmail?->verification_status === EmailVerificationStatus::Ok ? 1.5 : 0.0,
                 'named_person_ok' => $personOk ? 1.5 : 0.0,
                 'other_address_ok' => $anyOk && $company->contactEmail?->verification_status !== EmailVerificationStatus::Ok && ! $personOk ? 1.0 : 0.0,
+                // Owner / decision-maker found (D132).
+                'owner_known' => $this->founders($company)->isNotEmpty() ? 0.5 : 0.0,
+                'whatsapp' => $company->whatsapp !== null ? 1.0 : 0.0,
+                'phone' => $company->phone !== null ? 0.5 : 0.0,
             ]),
             'fit' => $this->line(2.0, [
                 'local_domain' => $company->domain !== null && str_ends_with($company->domain, '.'.strtolower($company->country)) ? 0.5 : 0.0,

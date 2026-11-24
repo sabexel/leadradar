@@ -598,3 +598,14 @@
 - Tests: planner order updated; per-market share test. Agency + search tests pass.
 - Decisions: D129.
 - Notes / follow-ups: UAE agencies get their share from the next run. MillionVerifier balance ~94 limits verification.
+
+## 2026-11-24 — UAE Contact details + owners + sort (D130–D133)
+- Done: CI fix (fixture formatting; #24/#25 red, #26 green). Default leads sort by qualified date; `PhoneExtractor` +
+  `companies.whatsapp` migration + table display; `FindDecisionMakerJob` / `DecisionMakerSelector` /
+  `BraveSearchService::searchDecisionMakers` at find_linkedin for agency/business leads without founders; business
+  gate accepts phone/WhatsApp, threshold 2.0, one credit per business.
+- Tests: `OwnerAndContactsTest` (3), business dataset now 4 cases, default-sort test, score-order tests made explicit,
+  agency early-stop test given a fixed neutral name (random "… Studio" names flaked it). 645+ passing.
+- Run #8 (live): 30 UAE businesses → 0 qualified under the old rules (17 good sites, 9 no email); 4 timeouts. The 30
+  are re-crawled after this change to pick up phone/WhatsApp/owner.
+- Decisions: D130–D133.

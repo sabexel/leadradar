@@ -75,6 +75,21 @@ final class BraveSearchService extends ExternalApiService
      * One query: `site:linkedin.com/in "{full name}" "{company}"`. Returns the matching search result
      * (its `url` is the raw result URL); the LinkedIn page is never requested.
      */
+    /**
+     * One query for a company's decision-maker on LinkedIn (D132): `site:linkedin.com/in "{company}" (owner OR
+     * founder OR CEO OR "managing director")`, in the company's market. Returns raw results for
+     * DecisionMakerSelector; the LinkedIn page is never requested.
+     *
+     * @return Collection<int, SearchResult>
+     */
+    public function searchDecisionMakers(string $companyName, string $country): Collection
+    {
+        $query = sprintf('site:linkedin.com/in "%s" (owner OR founder OR CEO OR "managing director")', Str::squish($companyName));
+        $country = strtoupper($country);
+
+        return $this->search($query, in_array($country, self::MARKETS, true) ? $country : 'ALL');
+    }
+
     public function findLinkedInProfile(string $firstName, string $lastName, string $companyName): ?SearchResult
     {
         $query = sprintf('site:linkedin.com/in "%s %s" "%s"', Str::squish($firstName), Str::squish($lastName), Str::squish($companyName));

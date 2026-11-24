@@ -70,19 +70,24 @@ it('audits a business home page for weaknesses', function () {
         ->and($detector->detect($old, 'Smile Clinic', [], PageType::Contact))->not->toContain('audit:no_viewport');
 });
 
-it('qualifies a business with a weak site and a verified inbox, not one with a good site', function (array $stack, LeadStatus $expected) {
+it('qualifies a reachable business — weak sites score higher — and rejects an unreachable one (D133)', function (array $stack, ?string $whatsapp, bool $inbox, LeadStatus $expected) {
     $company = Company::factory()->create([
         'lead_product' => LeadProduct::Business, 'country' => 'AE', 'domain' => 'smileexample.ae', 'website' => 'https://smileexample.ae',
         'registration_number' => null, 'registry' => null, 'company_status' => null, 'accounts_category' => null,
-        'tech_stack' => $stack, 'status' => LeadStatus::Enriching, 'pipeline_step' => PipelineStep::Qualify,
+        'tech_stack' => $stack, 'whatsapp' => $whatsapp, 'phone' => null, 'status' => LeadStatus::Enriching, 'pipeline_step' => PipelineStep::Qualify,
     ]);
-    $inbox = EmailAddress::factory()->for($company)->verified()->create(['email' => 'info@smileexample.ae', 'kind' => EmailKind::Contact, 'origin' => EmailOrigin::Crawled]);
-    $company->update(['contact_email_id' => $inbox->id]);
+
+    if ($inbox) {
+        $email = EmailAddress::factory()->for($company)->verified()->create(['email' => 'info@smileexample.ae', 'kind' => EmailKind::Contact, 'origin' => EmailOrigin::Crawled]);
+        $company->update(['contact_email_id' => $email->id]);
+    }
 
     app(QualifyCompanyAction::class)->run($company->refresh());
 
     expect($company->refresh()->status)->toBe($expected);
 })->with([
-    'not mobile-ready, no https' => [['audit:no_viewport', 'audit:no_https'], LeadStatus::Qualified],
-    'good site' => [['built:wordpress'], LeadStatus::Rejected],
+    'weak site, verified inbox' => [['audit:no_viewport', 'audit:no_https'], null, true, LeadStatus::Qualified],
+    'good site, verified inbox' => [['built:wordpress'], null, true, LeadStatus::Qualified],
+    'WhatsApp only' => [['built:wordpress'], '+971501234567', false, LeadStatus::Qualified],
+    'no email, no phone' => [['audit:no_viewport'], null, false, LeadStatus::Rejected],
 ]);

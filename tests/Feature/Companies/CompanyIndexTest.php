@@ -68,9 +68,9 @@ it('lists leads with every column the table needs, best score first', function (
     $middle = Company::factory()->qualified(7.0)->create();
     $unscored = Company::factory()->discovered()->create();
 
-    expect(listedIds())->toBe([$best->id, $middle->id, $unscored->id]);
+    expect(listedIds(['sort' => 'score']))->toBe([$best->id, $middle->id, $unscored->id]);
 
-    $this->get(route('companies.index'))->assertInertia(fn (Assert $page) => $page
+    $this->get(route('companies.index', ['sort' => 'score']))->assertInertia(fn (Assert $page) => $page
         ->where('companies.total', 3)
         ->where('companies.data.0.name', 'Example Digital Ltd')
         ->where('companies.data.0.score', 9.5)
@@ -93,8 +93,8 @@ it('filters by status, outreach, type and score range', function () {
     $nearMiss = Company::factory()->rejected()->create(['score' => 5.0]);
     Company::factory()->create(['status' => LeadStatus::Enriching]);
 
-    expect(listedIds(['status' => ['qualified']]))->toBe([$agency->id, $client->id])
-        ->and(listedIds(['status' => 'qualified,rejected']))->toBe([$agency->id, $client->id, $nearMiss->id])
+    expect(listedIds(['status' => ['qualified'], 'sort' => 'score']))->toBe([$agency->id, $client->id])
+        ->and(listedIds(['status' => 'qualified,rejected', 'sort' => 'score']))->toBe([$agency->id, $client->id, $nearMiss->id])
         ->and(listedIds(['outreach' => ['contacted']]))->toBe([$client->id])
         ->and(listedIds(['type' => ['direct_client']]))->toBe([$client->id])
         ->and(listedIds(['score_min' => 8]))->toBe([$agency->id])
@@ -223,3 +223,13 @@ it('validates bulk requests', function (array $payload, string $field) {
     'no ids' => [['action' => 'contacted', 'ids' => []], 'ids'],
     'done is not a step' => [['action' => 'retry', 'ids' => [1], 'step' => 'done'], 'step'],
 ]);
+
+it('lists the most recently qualified leads first by default (D130)', function () {
+    $old = Company::factory()->qualified(9.0)->create(['qualified_at' => now()->subDays(3)]);
+    $new = Company::factory()->qualified(6.0)->create(['qualified_at' => now()->subHour()]);
+    $waiting = Company::factory()->create(['status' => LeadStatus::Enriching]);
+
+    expect(listedIds())->toBe([$new->id, $old->id, $waiting->id]);
+
+    $this->get(route('companies.index'))->assertInertia(fn (Assert $page) => $page->where('filters.sort', 'qualified_at')->where('filters.dir', 'desc'));
+});

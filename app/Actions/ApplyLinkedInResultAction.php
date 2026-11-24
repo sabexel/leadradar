@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\DTOs\Search\SearchResult;
+use App\Enums\DataSource;
+use App\Enums\LeadProduct;
+use App\Enums\PersonRole;
 use App\Enums\PipelineOutcome;
 use App\Enums\PipelineStep;
 use App\Models\Company;
@@ -26,6 +29,49 @@ final class ApplyLinkedInResultAction
     /**
      * Founder 1, then Founder 2 — skipping anyone with a URL or searched recently.
      */
+    /**
+     * Agency and business leads without registry founders (most outside the UK) get ONE search for a
+     * decision-maker (D132), once per lead.
+     */
+    public function needsDecisionMakerSearch(Company $company): bool
+    {
+        return in_array($company->lead_product, [LeadProduct::Agency, LeadProduct::Business], true)
+            && filled(config('services.brave.key'))
+            && ! $company->founders()->exists()
+            && ! $company->pipelineEvents()->where('message', 'like', 'Decision-maker search%')->exists();
+    }
+
+    /**
+     * @param  array{first_name: string, last_name: string, role: string, url: string, source_url: string}|null  $found
+     */
+    public function applyDecisionMaker(Company $company, ?array $found): ?Person
+    {
+        if ($found === null) {
+            $company->recordEvent(PipelineStep::FindLinkedIn, PipelineOutcome::Skipped, 'Decision-maker search: nobody found');
+
+            return null;
+        }
+
+        $person = $company->people()->create([
+            'position' => 1,
+            'first_name' => $found['first_name'],
+            'last_name' => $found['last_name'],
+            'role' => PersonRole::Founder,
+            'linkedin_url' => $found['url'],
+            'linkedin_source_url' => $found['source_url'],
+            'linkedin_checked_at' => now(),
+            'source' => DataSource::WebSearch,
+            'source_url' => $found['source_url'],
+        ]);
+
+        $company->recordEvent(PipelineStep::FindLinkedIn, PipelineOutcome::Ok, "Decision-maker search: {$found['first_name']} {$found['last_name']} ({$found['role']})", [
+            'role' => $found['role'],
+            'linkedin' => $found['url'],
+        ]);
+
+        return $person;
+    }
+
     public function nextPerson(Company $company): ?Person
     {
         return $company->founders()->get()->first(fn (Person $p): bool => $p->linkedin_url === null
