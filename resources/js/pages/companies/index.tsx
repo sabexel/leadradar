@@ -762,6 +762,14 @@ function CompanyTableRow({
                         {humanise(company.rejectReason)}
                     </div>
                 )}
+                {company.statusNote && (
+                    <div
+                        className="mt-0.5 line-clamp-2 max-w-56 text-xs text-muted-foreground"
+                        title={company.statusNote}
+                    >
+                        {company.statusNote}
+                    </div>
+                )}
             </TableCell>
             <TableCell className="text-sm">
                 {humanise(company.outreachStatus)}

@@ -615,3 +615,8 @@
 - Tests: owner-matching test (place words, degrees, profile reuse). Agency + search tests pass.
 - Decisions: D134.
 - Notes / follow-ups: UAE leads found so far are clinics only (run #8 used the old planner); next runs mix categories (D129).
+
+## 2026-11-25 — LEADS Reasons, backfill, phone-reachable agencies (D135–D137)
+- Done: status reason under the badge; `BackfillContactsAction` + command + hourly schedule; owner search for finished leads with rescore; strong agencies reachable by phone/WhatsApp.
+- Tests: `BackfillAndReasonsTest` (4). 652 passing; Pint, Larastan, vp check, tsc clean.
+- Decisions: D135–D137.

@@ -53,6 +53,7 @@ export type CompanyRow = {
     } | null;
     status: string;
     rejectReason: string | null;
+    statusNote: string | null;
     pipelineStep: string;
     outreachStatus: string;
     qualifiedAt: string | null;

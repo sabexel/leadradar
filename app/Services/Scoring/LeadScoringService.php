@@ -59,8 +59,17 @@ final class LeadScoringService
         if ($company->lead_product === LeadProduct::Agency) {
             $breakdown = $this->agencyBreakdown($company);
             $total = min(10.0, round(array_sum(array_column($breakdown, 'points')), 1));
+            $gate = $this->failedAgencyGate($company);
 
-            return new LeadScore($total, $breakdown, $this->failedAgencyGate($company));
+            // A clear fit (offers 2+ platforms we serve) with a published phone/WhatsApp is reachable without a
+            // verified email (D137).
+            if ($gate === RejectReason::NoValidEmail
+                && count(TechStackDetector::offeredServed($company->tech_stack ?? [])) >= 2
+                && ($company->phone !== null || $company->whatsapp !== null)) {
+                $gate = null;
+            }
+
+            return new LeadScore($total, $breakdown, $gate);
         }
 
         $breakdown = [
@@ -246,6 +255,7 @@ final class LeadScoringService
             'company_inboxes' => $this->line(2.0, [
                 'contact_ok' => $company->contactEmail?->verification_status === EmailVerificationStatus::Ok ? 1.5 : 0.0,
                 'careers_found' => $company->careersEmail !== null ? 0.5 : 0.0,
+                'phone_or_whatsapp' => $company->phone !== null || $company->whatsapp !== null ? 0.5 : 0.0,
             ]),
         ];
     }

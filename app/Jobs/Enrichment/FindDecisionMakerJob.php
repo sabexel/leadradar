@@ -6,7 +6,9 @@ namespace App\Jobs\Enrichment;
 
 use App\Actions\AdvanceLeadPipelineAction;
 use App\Actions\ApplyLinkedInResultAction;
+use App\Actions\ApplyReverificationAction;
 use App\Enums\ExternalService;
+use App\Enums\LeadStatus;
 use App\Enums\PipelineStep;
 use App\Jobs\Concerns\FailsCompanyStep;
 use App\Jobs\Concerns\InteractsWithServiceLimits;
@@ -50,11 +52,15 @@ final class FindDecisionMakerJob implements ShouldBeUnique, ShouldQueue
         return PipelineStep::FindLinkedIn;
     }
 
-    public function handle(BraveSearchService $brave, DecisionMakerSelector $selector, ApplyLinkedInResultAction $linkedIn, AdvanceLeadPipelineAction $advance): void
+    public function handle(BraveSearchService $brave, DecisionMakerSelector $selector, ApplyLinkedInResultAction $linkedIn, AdvanceLeadPipelineAction $advance, ?ApplyReverificationAction $rescore = null): void
     {
         $company = Company::find($this->companyId);
 
-        if ($company === null || ! $company->isAwaiting($this->step()) || ! $linkedIn->needsDecisionMakerSearch($company)) {
+        // In the pipeline at find_linkedin, or a finished lead (also rejected) being filled in afterwards (D136).
+        $inPipeline = $company !== null && $company->isAwaiting($this->step());
+        $finished = $company !== null && $company->isFinished() && $company->status !== LeadStatus::Suppressed;
+
+        if ($company === null || (! $inPipeline && ! $finished) || ! $linkedIn->needsDecisionMakerSearch($company)) {
             return;
         }
 
@@ -69,6 +75,12 @@ final class FindDecisionMakerJob implements ShouldBeUnique, ShouldQueue
         }
 
         $linkedIn->applyDecisionMaker($company, $selector->select($company->name, $results, $company->location));
-        $advance->run($company->refresh());
+
+        if ($inPipeline) {
+            $advance->run($company->refresh());
+        } else {
+            // A known owner can change the score of a finished lead.
+            ($rescore ?? app(ApplyReverificationAction::class))->rescoreIfFinished($company);
+        }
     }
 }

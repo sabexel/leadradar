@@ -9,9 +9,11 @@ use App\Enums\EmailVerificationStatus;
 use App\Enums\LeadProduct;
 use App\Enums\LeadStatus;
 use App\Enums\OutreachStatus;
+use App\Enums\PipelineOutcome;
 use App\Enums\RejectReason;
 use App\Enums\SignalSource;
 use App\Models\Company;
+use App\Models\PipelineEvent;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -76,6 +78,13 @@ final class CompanyIndexQuery
     public function paginate(array $filters): LengthAwarePaginator
     {
         return $this->query($filters)
+            ->addSelect(['status_note' => PipelineEvent::query()
+                ->select('message')
+                ->whereColumn('company_id', 'companies.id')
+                ->whereIn('outcome', [PipelineOutcome::Rejected, PipelineOutcome::Failed])
+                ->latest('id')
+                ->limit(1),
+            ])
             ->with([
                 'founders.email',
                 'contactEmail',
@@ -276,6 +285,10 @@ final class CompanyIndexQuery
             ],
             'status' => $company->status->value,
             'rejectReason' => $company->reject_reason?->value,
+            // Why it was rejected / failed, in words (D135): the last such timeline message.
+            'statusNote' => in_array($company->status->value, ['rejected', 'error', 'suppressed'], true) && is_string($company->getAttribute('status_note'))
+                ? $company->getAttribute('status_note')
+                : null,
             'pipelineStep' => $company->pipeline_step->value,
             'outreachStatus' => $company->outreach_status->value,
             'qualifiedAt' => $company->qualified_at?->toIso8601String(),
